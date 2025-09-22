@@ -1,0 +1,33 @@
+{
+  "name": "@edunft/contracts",
+  "version": "1.0.0",
+  "description": "EduNFT Smart Contracts",
+  "main": "index.js",
+  "scripts": {
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "deploy:hardhat": "hardhat run scripts/deploy.ts --network hardhat",
+    "deploy:mumbai": "hardhat run scripts/deploy.ts --network mumbai",
+    "deploy:local": "hardhat run scripts/deploy.ts --network localhost",
+    "verify:mumbai": "hardhat verify --network mumbai",
+    "node": "hardhat node",
+    "clean": "hardhat clean"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^4.0.0",
+    "@openzeppelin/contracts": "^5.0.1",
+    "@openzeppelin/contracts-upgradeable": "^5.0.1",
+    "@openzeppelin/hardhat-upgrades": "^1.28.0",
+    "@typechain/ethers-v6": "^0.4.3",
+    "@typechain/hardhat": "^9.1.0",
+    "chai": "^4.3.7",
+    "ethers": "^6.10.0",
+    "hardhat": "^2.19.4",
+    "hardhat-gas-reporter": "^1.0.9",
+    "solidity-coverage": "^0.8.5",
+    "typechain": "^8.3.1"
+  },
+  "dependencies": {
+    "dotenv": "^16.3.1"
+  }
+}

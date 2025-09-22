@@ -1,0 +1,9 @@
+{
+  "name": "edunft-mvp",
+  "version": "1.0.0",
+  "description": "Lernis - Blockchain-based Educational Certificate Platform",
+  "private": true,
+  "dependencies": {
+    "qrcode.react": "^4.2.0"
+  }
+}

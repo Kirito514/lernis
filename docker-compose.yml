@@ -1,0 +1,78 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: edunft-postgres
+    environment:
+      POSTGRES_DB: edunft
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: edunft-mailhog
+    ports:
+      - "1025:1025"  # SMTP server
+      - "8025:8025"  # Web UI
+    environment:
+      MH_STORAGE: maildir
+      MH_MAILDIR_PATH: /maildir
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: edunft-api
+    ports:
+      - "4000:4000"
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/edunft
+      - JWT_ACCESS_SECRET=dev_jwt_access_secret
+      - JWT_REFRESH_SECRET=dev_jwt_refresh_secret
+      - ENCRYPTION_KEY_32B=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+      - GASLESS_MODE=mock
+      - SMTP_HOST=mailhog
+      - SMTP_PORT=1025
+      - EMAIL_FROM=noreply@edunft.io
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mailhog:
+        condition: service_started
+    volumes:
+      - ./apps/api:/app
+      - /app/node_modules
+    command: pnpm dev
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    container_name: edunft-web
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_BASE=http://localhost:4000/api
+      - NEXT_PUBLIC_MUMBAI_RPC=https://polygon-mumbai.infura.io/v3/YOUR_PROJECT_ID
+      - NEXT_PUBLIC_CONTRACT_ADDRESS=
+    depends_on:
+      - api
+    volumes:
+      - ./apps/web:/app
+      - /app/node_modules
+      - /app/.next
+    command: pnpm dev
+
+volumes:
+  postgres_data:

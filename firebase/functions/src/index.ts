@@ -1,0 +1,1 @@
+import * as functions from 'firebase-functions';\nimport * as admin from 'firebase-admin';\nadmin.initializeApp();\nexport const ping = functions.https.onCall(async (_data, context) => { if (!context.auth) { throw new functions.https.HttpsError('unauthenticated','Login required'); } return { ok: true, ts: Date.now() }; });
