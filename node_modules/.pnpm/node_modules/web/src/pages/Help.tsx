@@ -105,7 +105,7 @@ export default function Help() {
 
   return (
     <div className="flex h-screen bg-gray-50">
-      <Sidebar isCollapsed={sidebarCollapsed} onToggle={toggleSidebar} />
+      <Sidebar collapsed={sidebarCollapsed} onToggle={toggleSidebar} />
 
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}

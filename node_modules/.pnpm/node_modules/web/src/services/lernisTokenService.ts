@@ -187,7 +187,7 @@ export const lernisTokenService = {
     userId: string, 
     amountUZS: number, 
     paymentMethod: string,
-    paymentData: any
+    _paymentData: any
   ): Promise<{ success: boolean; transactionId?: string; error?: string }> {
     try {
       // UZS to USD conversion (simplified)
@@ -252,10 +252,10 @@ export const lernisTokenService = {
   },
 
   // Deduct LERNIS tokens for NFT minting
-  async deductMintingFee(userId: string, amount: number): Promise<boolean> {
+  async deductMintingFee(_userId: string, _amount: number): Promise<boolean> {
     try {
       // In real app, this would deduct from user's LERNIS balance
-      console.log(`Deducting ${amount} LERNIS for NFT minting`);
+      console.log(`Deducting ${_amount} LERNIS for NFT minting`);
       return true;
     } catch (error) {
       return false;

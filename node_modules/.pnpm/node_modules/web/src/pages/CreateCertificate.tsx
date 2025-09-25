@@ -3,10 +3,10 @@ import Sidebar from '../components/Sidebar';
 import { useAuth } from '../contexts/AuthContext';
 import { certificateService } from '../services/firebaseService';
 import {
-  Bell,
-  Search,
+  // Bell,
+  // Search,
   Save,
-  Upload,
+  // Upload,
   X,
   Plus,
   FileText,
@@ -15,9 +15,9 @@ import {
   Award,
   QrCode,
   Eye,
-  Download,
+  // Download,
   Palette,
-  Image,
+  // Image,
   Clock,
   CheckCircle,
   ArrowRight,
@@ -52,11 +52,15 @@ export default function CreateCertificate() {
   
   const { userData, currentUser } = useAuth();
   
+  const toggleSidebar = () => {
+    setSidebarCollapsed(!sidebarCollapsed);
+  };
+
   // Show loading if user is not loaded yet
   if (!currentUser) {
     return (
       <div className="flex h-screen bg-gray-50">
-        <Sidebar isCollapsed={sidebarCollapsed} onToggle={toggleSidebar} />
+        <Sidebar collapsed={sidebarCollapsed} onToggle={toggleSidebar} />
         <main className="flex-1 overflow-y-auto p-6">
           <div className="max-w-2xl mx-auto">
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 text-center">
@@ -68,10 +72,6 @@ export default function CreateCertificate() {
       </div>
     );
   }
-
-  const toggleSidebar = () => {
-    setSidebarCollapsed(!sidebarCollapsed);
-  };
 
   // Generate unique certificate ID
   const generateCertificateId = () => {
@@ -261,7 +261,7 @@ export default function CreateCertificate() {
 
   return (
     <div className="flex h-screen bg-gray-50">
-      <Sidebar isCollapsed={sidebarCollapsed} onToggle={toggleSidebar} />
+      <Sidebar collapsed={sidebarCollapsed} onToggle={toggleSidebar} />
 
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}

@@ -88,6 +88,8 @@ export default function Login() {
         errorMessage = 'Incorrect password.';
       } else if (error.code === 'auth/invalid-email') {
         errorMessage = 'Invalid email address.';
+      } else if (error.code === 'auth/invalid-credential') {
+        errorMessage = 'Invalid email or password. Please check your credentials.';
       } else if (error.code === 'auth/too-many-requests') {
         errorMessage = 'Too many failed attempts. Please try again later.';
       }

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import MarketplaceBanner from '../components/MarketplaceBanner';
@@ -11,19 +11,19 @@ import {
   walletService,
   seedDemoData,
   type Certificate,
-  type Achievement,
-  type Transaction,
+  // type Achievement,
+  // type Transaction,
   type WalletStats
 } from '../services/firebaseService';
 import {
   Bell,
   Search,
   Plus,
-  TrendingUp,
-  Users,
+  // TrendingUp,
+  // Users,
   FileText,
   Award,
-  Calendar,
+  // Calendar,
   Download,
   Eye,
   MoreVertical,
@@ -32,18 +32,18 @@ import {
   ArrowDownRight,
   Clock,
   CheckCircle,
-  AlertCircle,
-  BarChart3,
-  PieChart,
-  Activity
+  AlertCircle
+  // BarChart3,
+  // PieChart,
+  // Activity
 } from 'lucide-react';
 
 export default function Dashboard() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [loading, setLoading] = useState(true);
   const [certificates, setCertificates] = useState<Certificate[]>([]);
-  const [achievements, setAchievements] = useState<Achievement[]>([]);
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  // const [achievements, setAchievements] = useState<Achievement[]>([]);
+  // const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [walletStats, setWalletStats] = useState<WalletStats | null>(null);
   const [eduTokenBalance, setEduTokenBalance] = useState<LernisTokenBalance | null>(null);
   
@@ -70,7 +70,7 @@ export default function Dashboard() {
         }
         
         // Load data in parallel with optimized queries
-        const [certs, achievs, trans, stats, eduBalance] = await Promise.all([
+        const [certs, , , stats, eduBalance] = await Promise.all([
           certificateService.getCertificates(currentUser.uid),
           achievementService.getAchievements(currentUser.uid),
           transactionService.getTransactions(currentUser.uid),
@@ -79,8 +79,8 @@ export default function Dashboard() {
         ]);
         
         setCertificates(certs);
-        setAchievements(achievs);
-        setTransactions(trans);
+        // setAchievements(achievs);
+        // setTransactions(trans);
         setWalletStats(stats);
         setEduTokenBalance(eduBalance);
       } catch (error) {
@@ -182,7 +182,7 @@ export default function Dashboard() {
   // Skeleton loading component
   const SkeletonLoader = () => (
     <div className="flex h-screen bg-gray-50">
-      <Sidebar isCollapsed={sidebarCollapsed} onToggle={toggleSidebar} />
+      <Sidebar collapsed={sidebarCollapsed} onToggle={toggleSidebar} />
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header skeleton */}
         <header className="bg-white border-b border-gray-200 px-6 py-4">
@@ -269,7 +269,7 @@ export default function Dashboard() {
   return (
     <div className="flex h-screen bg-gray-50">
       {/* Sidebar */}
-      <Sidebar isCollapsed={sidebarCollapsed} onToggle={toggleSidebar} />
+      <Sidebar collapsed={sidebarCollapsed} onToggle={toggleSidebar} />
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">

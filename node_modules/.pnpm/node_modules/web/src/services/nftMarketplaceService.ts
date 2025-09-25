@@ -426,7 +426,8 @@ export const nftMarketplaceService = {
         },
         totalSupply: 150,
         floorPrice: 25,
-        volume: 5000
+        volume: 5000,
+        nfts: []
       }
     ];
   },
@@ -516,7 +517,7 @@ export const nftMarketplaceService = {
         nftId: nftId,
         nftName: nft.name,
         buyer: userId,
-        seller: nft.owner,
+        seller: typeof nft.owner === 'string' ? nft.owner : 'unknown',
         price: nft.price,
         timestamp: new Date().toISOString(),
         status: 'completed'
@@ -539,15 +540,15 @@ export const nftMarketplaceService = {
   // Mint NFT
   async mintNFT(
     userId: string,
-    name: string,
-    description: string,
-    image: string,
-    category: string,
-    attributes: { trait_type: string; value: string | number }[]
+    _name: string,
+    _description: string,
+    _image: string,
+    _category: string,
+    _attributes: { trait_type: string; value: string | number }[]
   ): Promise<{ success: boolean; nftId?: string; error?: string }> {
     try {
       // Simulate NFT minting
-      console.log(`User ${userId} minting NFT: ${name}`);
+      console.log(`User ${userId} minting NFT: ${_name}`);
       
       // In real app, this would:
       // 1. Check user has enough LERNIS for minting fee
