@@ -4,7 +4,7 @@ import Sidebar from '../components/Sidebar';
 import { useAuth } from '../contexts/AuthContext';
 import MarketplaceBanner from '../components/MarketplaceBanner';
 import { lernisTokenService, type LernisTokenBalance, type LernisTokenTransaction } from '../services/lernisTokenService';
-import { nftMarketplaceService, type NFTTransaction } from '../services/nftMarketplaceService';
+import { type NFTTransaction } from '../services/nftMarketplaceService';
 import { 
   certificateService, 
   achievementService, 
@@ -12,10 +12,10 @@ import {
   walletService as firebaseWalletService,
   type Certificate,
   type Achievement,
-  type WalletStats
+  // type WalletStats
 } from '../services/firebaseService';
 import { walletService, type WalletBalance, type WalletTransaction } from '../services/walletService';
-import { tokenService, type TokenBalance, type TokenTransaction } from '../services/tokenService';
+import { tokenService } from '../services/tokenService';
 import QRCode from 'qrcode';
 import {
   Bell,
@@ -41,7 +41,7 @@ import {
   BarChart3,
   ArrowUpCircle,
   PlusCircle,
-  Minus,
+  // Minus,
   DollarSign,
   ArrowDownCircle,
   X
@@ -54,14 +54,14 @@ export default function WalletPage() {
   const [loading, setLoading] = useState(true);
   const [certificates, setCertificates] = useState<Certificate[]>([]);
   const [achievements, setAchievements] = useState<Achievement[]>([]);
-  const [walletStats, setWalletStats] = useState<WalletStats | null>(null);
+  // const [walletStats, setWalletStats] = useState<WalletStats | null>(null);
   const [walletBalance, setWalletBalance] = useState<WalletBalance | null>(null);
   const [eduTokenBalance, setEduTokenBalance] = useState<LernisTokenBalance | null>(null);
   const [eduTokenTransactions, setEduTokenTransactions] = useState<LernisTokenTransaction[]>([]);
   const [nftTransactions, setNftTransactions] = useState<NFTTransaction[]>([]);
   const [walletTransactions, setWalletTransactions] = useState<WalletTransaction[]>([]);
-  const [tokenBalances, setTokenBalances] = useState<TokenBalance[]>([]);
-  const [tokenTransactions, setTokenTransactions] = useState<TokenTransaction[]>([]);
+  // const [tokenBalances, setTokenBalances] = useState<TokenBalance[]>([]);
+  // const [tokenTransactions, setTokenTransactions] = useState<TokenTransaction[]>([]);
   const [showExportModal, setShowExportModal] = useState(false);
   const [showAddressModal, setShowAddressModal] = useState(false);
   const [showPhraseModal, setShowPhraseModal] = useState(false);
@@ -73,9 +73,9 @@ export default function WalletPage() {
   const [exportData, setExportData] = useState<{privateKey: string, mnemonic?: string} | null>(null);
   const [showCreateWalletModal, setShowCreateWalletModal] = useState(false);
   const [isCreatingWallet, setIsCreatingWallet] = useState(false);
-  const [showToast, setShowToast] = useState(false);
-  const [toastMessage, setToastMessage] = useState('');
-  const [toastType, setToastType] = useState<'success' | 'error' | 'info'>('success');
+  // const [showToast, setShowToast] = useState(false);
+  // const [toastMessage, setToastMessage] = useState('');
+  // const [toastType, setToastType] = useState<'success' | 'error' | 'info'>('success');
   const [copiedItem, setCopiedItem] = useState<string | null>(null);
   
   // Token creation form
@@ -126,7 +126,7 @@ export default function WalletPage() {
         
         // Agar wallet mavjud bo'lsa, boshqa ma'lumotlarni ham yuklash
         if (userData?.wallet) {
-            const [certs, achievs, trans, stats, balance, walletTrans, tokenBalances, tokenTrans] = await Promise.all([
+            const [certs, achievs, , , balance, walletTrans, , ] = await Promise.all([
               certificateService.getCertificates(currentUser.uid),
               achievementService.getAchievements(currentUser.uid),
               transactionService.getTransactions(currentUser.uid),
@@ -139,11 +139,11 @@ export default function WalletPage() {
         
         setCertificates(certs);
         setAchievements(achievs);
-        setWalletStats(stats);
-        setWalletBalance(balance);
-        setWalletTransactions(walletTrans);
-          setTokenBalances([]);
-          setTokenTransactions([]);
+            // setWalletStats(stats);
+            setWalletBalance(balance);
+            setWalletTransactions(walletTrans);
+            // setTokenBalances([]);
+            // setTokenTransactions([]);
         }
         
         console.log('EDU Token Balance:', eduBalance);
@@ -262,12 +262,13 @@ export default function WalletPage() {
   };
 
   const showToastNotification = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
-    setToastMessage(message);
-    setToastType(type);
-    setShowToast(true);
-    setTimeout(() => {
-      setShowToast(false);
-    }, 3000);
+    // setToastMessage(message);
+    // setToastType(type);
+    // setShowToast(true);
+    // setTimeout(() => {
+    //   setShowToast(false);
+    // }, 3000);
+    console.log(`Toast: ${type} - ${message}`);
   };
 
   const copyToClipboard = (text: string, itemType: string) => {
@@ -278,13 +279,13 @@ export default function WalletPage() {
     }, 2000);
   };
 
-  const copyPhrase = () => {
-    if (userData?.wallet?.mnemonic) {
-      copyToClipboard(userData.wallet.mnemonic, 'phrase');
-    } else {
-      showToastNotification('No recovery phrase available', 'error');
-    }
-  };
+  // const copyPhrase = () => {
+  //   if (userData?.wallet?.mnemonic) {
+  //     copyToClipboard(userData.wallet.mnemonic, 'phrase');
+  //   } else {
+  //     showToastNotification('No recovery phrase available', 'error');
+  //   }
+  // };
 
   const showAddressDetails = () => {
     if (userData?.wallet?.address) {
@@ -347,13 +348,13 @@ export default function WalletPage() {
 
     setIsCreatingToken(true);
     try {
-      const tokenData = await tokenService.createToken(
-        tokenForm.name,
-        tokenForm.symbol,
-        tokenForm.initialSupply,
-        tokenForm.decimals,
-        userData.userId
-      );
+      // const tokenData = await tokenService.createToken(
+      //   tokenForm.name,
+      //   tokenForm.symbol,
+      //   tokenForm.initialSupply,
+      //   tokenForm.decimals,
+      //   userData.userId
+      // );
 
       showToastNotification(`Token "${tokenForm.symbol}" created successfully!`, 'success');
       setShowCreateTokenModal(false);
@@ -361,8 +362,8 @@ export default function WalletPage() {
       
       // Token balanslarini yangilash
       if (userData?.wallet?.address) {
-        const newTokenBalances = await tokenService.getTokenBalances(userData.wallet.address);
-        setTokenBalances(newTokenBalances);
+        // const newTokenBalances = await tokenService.getTokenBalances(userData.wallet.address);
+        // setTokenBalances(newTokenBalances);
       }
     } catch (error) {
       console.error('Error creating token:', error);
@@ -399,8 +400,8 @@ export default function WalletPage() {
       
       // Token tranzaksiyalarini yangilash
       if (userData?.wallet?.address) {
-        const newTokenTransactions = await tokenService.getTokenTransactions(userData.wallet.address);
-        setTokenTransactions(newTokenTransactions);
+        // const newTokenTransactions = await tokenService.getTokenTransactions(userData.wallet.address);
+        // setTokenTransactions(newTokenTransactions);
       }
     } catch (error) {
       console.error('Error transferring token:', error);
@@ -413,7 +414,7 @@ export default function WalletPage() {
   // Skeleton loading component
   const SkeletonLoader = () => (
       <div className="flex h-screen bg-gray-50">
-        <Sidebar isCollapsed={sidebarCollapsed} onToggle={toggleSidebar} />
+        <Sidebar collapsed={sidebarCollapsed} onToggle={toggleSidebar} />
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header skeleton */}
         <header className="bg-white border-b border-gray-200 px-6 py-4">
@@ -495,7 +496,7 @@ export default function WalletPage() {
 
   return (
     <div className="flex h-screen bg-gray-50">
-      <Sidebar isCollapsed={sidebarCollapsed} onToggle={toggleSidebar} />
+      <Sidebar collapsed={sidebarCollapsed} onToggle={toggleSidebar} />
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
@@ -851,7 +852,7 @@ export default function WalletPage() {
                                   </div>
                                   <div>
                                     <p className="text-sm font-medium text-gray-900 capitalize">{tx.type}</p>
-                                    <p className="text-xs text-gray-500">{formatDate(tx.timestamp)}</p>
+                                    <p className="text-xs text-gray-500">{formatDate(new Date(tx.timestamp).getTime())}</p>
                                   </div>
                                 </div>
                                 <div className="text-right">
@@ -1050,7 +1051,7 @@ export default function WalletPage() {
                                   <FileText className="h-5 w-5 text-blue-600" />
                                 </div>
                                 <div>
-                                  <h4 className="font-medium text-gray-900">{cert.courseName || 'Certificate'}</h4>
+                                  <h4 className="font-medium text-gray-900">{cert.name || 'Certificate'}</h4>
                                   <p className="text-sm text-gray-600">{cert.issuer || 'Lernis Platform'}</p>
                                 </div>
                               </div>
@@ -1126,7 +1127,7 @@ export default function WalletPage() {
                                 <div>
                                   <p className="font-medium text-gray-900 capitalize">{tx.type}</p>
                                     <p className="text-sm text-gray-600">{tx.description}</p>
-                                    <p className="text-xs text-gray-500">{formatDate(tx.timestamp)}</p>
+                                    <p className="text-xs text-gray-500">{formatDate(new Date(tx.timestamp).getTime())}</p>
                                 </div>
                               </div>
                               <div className="text-right">
@@ -1164,7 +1165,7 @@ export default function WalletPage() {
                                   <div>
                                     <p className="font-medium text-gray-900">NFT Purchase</p>
                                     <p className="text-sm text-gray-600">{tx.nftName}</p>
-                                    <p className="text-xs text-gray-500">{formatDate(tx.timestamp)}</p>
+                                    <p className="text-xs text-gray-500">{formatDate(new Date(tx.timestamp).getTime())}</p>
               </div>
             </div>
                                 <div className="text-right">
@@ -1327,7 +1328,7 @@ export default function WalletPage() {
                           <span className="text-sm font-medium text-gray-700">Seed Phrase</span>
                                   </div>
                                   <button
-                          onClick={() => copyToClipboard(exportData.mnemonic, 'seedPhrase')}
+                          onClick={() => copyToClipboard(exportData.mnemonic || '', 'seedPhrase')}
                           className={`text-sm font-medium flex items-center space-x-1 ${
                             copiedItem === 'seedPhrase' 
                               ? 'text-green-600 hover:text-green-700' 

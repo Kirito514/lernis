@@ -76,7 +76,7 @@ export default function MyCertificates() {
   // Skeleton loading component
   const SkeletonLoader = () => (
     <div className="flex h-screen bg-gray-50">
-      <Sidebar isCollapsed={sidebarCollapsed} onToggle={toggleSidebar} />
+      <Sidebar collapsed={sidebarCollapsed} onToggle={toggleSidebar} />
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header skeleton */}
         <header className="bg-white border-b border-gray-200 px-6 py-4">
@@ -144,7 +144,7 @@ export default function MyCertificates() {
   if (loading) {
     return (
       <div className="flex h-screen bg-gray-50">
-        <Sidebar isCollapsed={sidebarCollapsed} onToggle={toggleSidebar} />
+        <Sidebar collapsed={sidebarCollapsed} onToggle={toggleSidebar} />
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
             <div className="w-16 h-16 bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg mx-auto mb-4">
@@ -159,7 +159,7 @@ export default function MyCertificates() {
 
   return (
     <div className="flex h-screen bg-gray-50">
-      <Sidebar isCollapsed={sidebarCollapsed} onToggle={toggleSidebar} />
+      <Sidebar collapsed={sidebarCollapsed} onToggle={toggleSidebar} />
 
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}

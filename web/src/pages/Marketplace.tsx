@@ -9,21 +9,21 @@ import {
   Search,
   Grid,
   List,
-  Star,
+  // Star,
   Eye,
   Heart,
-  TrendingUp,
-  Award,
-  Zap,
+  // TrendingUp,
+  // Award,
+  // Zap,
   Coins,
   Plus,
   X,
-  CheckCircle,
-  AlertCircle,
-  Crown,
-  Gem,
-  Shield,
-  Sparkles
+  // CheckCircle,
+  // AlertCircle,
+  // Crown,
+  // Gem,
+  // Shield,
+  // Sparkles
 } from 'lucide-react';
 
 export default function Marketplace() {
@@ -39,7 +39,7 @@ export default function Marketplace() {
   const [lernisBalance, setLernisBalance] = useState<string>('0');
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);
   const [selectedNFT, setSelectedNFT] = useState<NFT | null>(null);
-  const [showMintModal, setShowMintModal] = useState(false);
+  // const [showMintModal, setShowMintModal] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -97,70 +97,70 @@ export default function Marketplace() {
   };
 
   // Rarity uchun vizual effektlar
-  const getRarityConfig = (rarity: NFT['rarity']) => {
-    switch (rarity) {
-      case 'legendary':
-        return {
-          gradient: 'from-yellow-400 via-orange-500 to-red-600',
-          glow: 'shadow-2xl shadow-yellow-500/50',
-          border: 'border-yellow-400',
-          bg: 'bg-gradient-to-br from-yellow-50 to-orange-50',
-          icon: Crown,
-          iconColor: 'text-yellow-600',
-          textColor: 'text-yellow-800',
-          badgeBg: 'bg-gradient-to-r from-yellow-400 to-orange-500',
-          animation: 'animate-pulse'
-        };
-      case 'epic':
-        return {
-          gradient: 'from-purple-500 via-pink-500 to-purple-600',
-          glow: 'shadow-xl shadow-purple-500/40',
-          border: 'border-purple-400',
-          bg: 'bg-gradient-to-br from-purple-50 to-pink-50',
-          icon: Gem,
-          iconColor: 'text-purple-600',
-          textColor: 'text-purple-800',
-          badgeBg: 'bg-gradient-to-r from-purple-500 to-pink-500',
-          animation: 'hover:animate-bounce'
-        };
-      case 'rare':
-        return {
-          gradient: 'from-blue-500 via-cyan-500 to-blue-600',
-          glow: 'shadow-lg shadow-blue-500/30',
-          border: 'border-blue-400',
-          bg: 'bg-gradient-to-br from-blue-50 to-cyan-50',
-          icon: Shield,
-          iconColor: 'text-blue-600',
-          textColor: 'text-blue-800',
-          badgeBg: 'bg-gradient-to-r from-blue-500 to-cyan-500',
-          animation: 'hover:scale-105'
-        };
-      case 'common':
-        return {
-          gradient: 'from-gray-400 via-gray-500 to-gray-600',
-          glow: 'shadow-md shadow-gray-400/20',
-          border: 'border-gray-300',
-          bg: 'bg-gradient-to-br from-gray-50 to-gray-100',
-          icon: Sparkles,
-          iconColor: 'text-gray-600',
-          textColor: 'text-gray-700',
-          badgeBg: 'bg-gradient-to-r from-gray-400 to-gray-500',
-          animation: ''
-        };
-      default:
-        return {
-          gradient: 'from-gray-400 to-gray-500',
-          glow: '',
-          border: 'border-gray-300',
-          bg: 'bg-gray-50',
-          icon: Sparkles,
-          iconColor: 'text-gray-600',
-          textColor: 'text-gray-700',
-          badgeBg: 'bg-gray-400',
-          animation: ''
-        };
-    }
-  };
+  // const getRarityConfig = (rarity: NFT['rarity']) => {
+  //   switch (rarity) {
+  //     case 'legendary':
+  //       return {
+  //         gradient: 'from-yellow-400 via-orange-500 to-red-600',
+  //         glow: 'shadow-2xl shadow-yellow-500/50',
+  //         border: 'border-yellow-400',
+  //         bg: 'bg-gradient-to-br from-yellow-50 to-orange-50',
+  //         icon: Crown,
+  //         iconColor: 'text-yellow-600',
+  //         textColor: 'text-yellow-800',
+  //         badgeBg: 'bg-gradient-to-r from-yellow-400 to-orange-500',
+  //         animation: 'animate-pulse'
+  //       };
+  //     case 'epic':
+  //       return {
+  //         gradient: 'from-purple-500 via-pink-500 to-purple-600',
+  //         glow: 'shadow-xl shadow-purple-500/40',
+  //         border: 'border-purple-400',
+  //         bg: 'bg-gradient-to-br from-purple-50 to-pink-50',
+  //         icon: Gem,
+  //         iconColor: 'text-purple-600',
+  //         textColor: 'text-purple-800',
+  //         badgeBg: 'bg-gradient-to-r from-purple-500 to-pink-500',
+  //         animation: 'hover:animate-bounce'
+  //       };
+  //     case 'rare':
+  //       return {
+  //         gradient: 'from-blue-500 via-cyan-500 to-blue-600',
+  //         glow: 'shadow-lg shadow-blue-500/30',
+  //         border: 'border-blue-400',
+  //         bg: 'bg-gradient-to-br from-blue-50 to-cyan-50',
+  //         icon: Shield,
+  //         iconColor: 'text-blue-600',
+  //         textColor: 'text-blue-800',
+  //         badgeBg: 'bg-gradient-to-r from-blue-500 to-cyan-500',
+  //         animation: 'hover:scale-105'
+  //       };
+  //     case 'common':
+  //       return {
+  //         gradient: 'from-gray-400 via-gray-500 to-gray-600',
+  //         glow: 'shadow-md shadow-gray-400/20',
+  //         border: 'border-gray-300',
+  //         bg: 'bg-gradient-to-br from-gray-50 to-gray-100',
+  //         icon: Sparkles,
+  //         iconColor: 'text-gray-600',
+  //         textColor: 'text-gray-700',
+  //         badgeBg: 'bg-gradient-to-r from-gray-400 to-gray-500',
+  //         animation: ''
+  //       };
+  //     default:
+  //       return {
+  //         gradient: 'from-gray-400 to-gray-500',
+  //         glow: '',
+  //         border: 'border-gray-300',
+  //         bg: 'bg-gray-50',
+  //         icon: Sparkles,
+  //         iconColor: 'text-gray-600',
+  //         textColor: 'text-gray-700',
+  //         badgeBg: 'bg-gray-400',
+  //         animation: ''
+  //       };
+  //   }
+  // };
 
   const filteredNFTs = nfts.filter(nft => {
     const matchesCategory = selectedCategory === 'all' || nft.category === selectedCategory;
@@ -193,7 +193,7 @@ export default function Marketplace() {
   if (loading) {
     return (
       <div className="flex h-screen bg-gray-50">
-        <Sidebar collapsed={sidebarCollapsed} onToggle={setSidebarCollapsed} />
+        <Sidebar collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed(!sidebarCollapsed)} />
         <main className="flex-1 flex items-center justify-center">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
@@ -206,7 +206,7 @@ export default function Marketplace() {
 
   return (
     <div className="flex h-screen bg-gray-50">
-      <Sidebar collapsed={sidebarCollapsed} onToggle={setSidebarCollapsed} />
+      <Sidebar collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed(!sidebarCollapsed)} />
       
       <main className="flex-1 overflow-auto">
         {/* Header */}
@@ -225,7 +225,7 @@ export default function Marketplace() {
                 </div>
               </div>
               <button
-                onClick={() => setShowMintModal(true)}
+                onClick={() => {/* setShowMintModal(true) */}}
                 className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors duration-200 flex items-center space-x-2"
               >
                 <Plus className="h-4 w-4" />

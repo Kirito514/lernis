@@ -1,5 +1,6 @@
 import { ethers } from 'ethers';
 import CryptoJS from 'crypto-js';
+// import '../types/ethereum';
 
 // Wallet interface
 export interface WalletData {
@@ -97,8 +98,8 @@ class WalletService {
   async getWalletBalance(address: string): Promise<WalletBalance> {
     try {
       // MetaMask yoki Web3 provider'ni tekshirish
-      if (typeof window !== 'undefined' && window.ethereum) {
-        const provider = new ethers.BrowserProvider(window.ethereum);
+      if (typeof window !== 'undefined' && (window as any).ethereum) {
+        const provider = new ethers.BrowserProvider((window as any).ethereum);
         
         // Polygon network'ni tekshirish
         const network = await provider.getNetwork();
@@ -218,7 +219,7 @@ class WalletService {
    */
   async importWallet(privateKeyOrMnemonic: string, userId: string): Promise<WalletData> {
     try {
-      let wallet: ethers.Wallet;
+      let wallet: any;
 
       // Private key yoki mnemonic ekanligini tekshirish
       if (privateKeyOrMnemonic.startsWith('0x')) {

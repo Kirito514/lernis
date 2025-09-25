@@ -1,5 +1,4 @@
 import { ethers } from 'ethers';
-import { walletService } from './walletService';
 
 // ERC-20 Token interface
 export interface TokenData {
@@ -36,30 +35,30 @@ export interface TokenTransaction {
   status: 'pending' | 'confirmed' | 'failed';
 }
 
-// ERC-20 ABI (minimal)
-const ERC20_ABI = [
-  "function name() view returns (string)",
-  "function symbol() view returns (string)",
-  "function decimals() view returns (uint8)",
-  "function totalSupply() view returns (uint256)",
-  "function balanceOf(address) view returns (uint256)",
-  "function transfer(address to, uint256 amount) returns (bool)",
-  "function approve(address spender, uint256 amount) returns (bool)",
-  "function allowance(address owner, address spender) view returns (uint256)",
-  "function transferFrom(address from, address to, uint256 amount) returns (bool)",
-  "event Transfer(address indexed from, address indexed to, uint256 value)"
-];
+// ERC-20 ABI (minimal) - commented out for now
+// const ERC20_ABI = [
+//   "function name() view returns (string)",
+//   "function symbol() view returns (string)",
+//   "function decimals() view returns (uint8)",
+//   "function totalSupply() view returns (uint256)",
+//   "function balanceOf(address) view returns (uint256)",
+//   "function transfer(address to, uint256 amount) returns (bool)",
+//   "function approve(address spender, uint256 amount) returns (bool)",
+//   "function allowance(address owner, address spender) view returns (uint256)",
+//   "function transferFrom(address from, address to, uint256 amount) returns (bool)",
+//   "event Transfer(address indexed from, address indexed to, uint256 value)"
+// ];
 
-// Token Factory ABI (simplified)
-const TOKEN_FACTORY_ABI = [
-  "function createToken(string memory name, string memory symbol, uint256 initialSupply, uint8 decimals) returns (address)",
-  "event TokenCreated(address indexed token, address indexed creator, string name, string symbol)"
-];
+// Token Factory ABI (simplified) - commented out for now
+// const TOKEN_FACTORY_ABI = [
+//   "function createToken(string memory name, string memory symbol, uint256 initialSupply, uint8 decimals) returns (address)",
+//   "event TokenCreated(address indexed token, address indexed creator, string name, string symbol)"
+// ];
 
 class TokenService {
-  private readonly TOKEN_FACTORY_ADDRESS = '0x0000000000000000000000000000000000000000'; // Placeholder
-  private readonly RPC_URL = 'https://polygon-rpc.com'; // Polygon RPC
-  private readonly CHAIN_ID = 137; // Polygon Mainnet
+  // private readonly TOKEN_FACTORY_ADDRESS = '0x0000000000000000000000000000000000000000'; // Placeholder
+  // private readonly RPC_URL = 'https://polygon-rpc.com'; // Polygon RPC
+  // private readonly CHAIN_ID = 137; // Polygon Mainnet
 
   /**
    * Yangi ERC-20 token yaratish
@@ -110,7 +109,7 @@ class TokenService {
   /**
    * Wallet'dagi token balanslarini olish
    */
-  async getTokenBalances(walletAddress: string): Promise<TokenBalance[]> {
+  async getTokenBalances(_walletAddress: string): Promise<TokenBalance[]> {
     try {
       // Bu yerda haqiqiy blockchain'dan token balanslari olinadi
       // Hozircha simulated data qaytaramiz
@@ -143,10 +142,10 @@ class TokenService {
    * Token jo'natish
    */
   async transferToken(
-    tokenAddress: string,
-    to: string,
-    amount: string,
-    privateKey: string
+    _tokenAddress: string,
+    _to: string,
+    _amount: string,
+    _privateKey: string
   ): Promise<string> {
     try {
       // Bu yerda haqiqiy blockchain'da token jo'natiladi
@@ -217,7 +216,7 @@ class TokenService {
   /**
    * Token ma'lumotlarini olish
    */
-  async getTokenInfo(tokenAddress: string): Promise<{
+  async getTokenInfo(_tokenAddress: string): Promise<{
     name: string;
     symbol: string;
     decimals: number;
@@ -257,7 +256,7 @@ class TokenService {
   /**
    * Token jo'natish uchun gas narxini hisoblash
    */
-  async estimateGasForTransfer(tokenAddress: string): Promise<string> {
+  async estimateGasForTransfer(_tokenAddress: string): Promise<string> {
     try {
       // Bu yerda haqiqiy gas narxi hisoblanadi
       // Hozircha simulated data qaytaramiz

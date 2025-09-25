@@ -1,4 +1,4 @@
-import React from 'react';
+// import React from 'react';
 import { Link } from 'react-router-dom';
 import { ShoppingBag, Coins, ArrowRight, Star, Zap, TrendingUp } from 'lucide-react';
 

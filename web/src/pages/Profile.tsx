@@ -56,7 +56,7 @@ export default function Profile() {
   // Skeleton loading component
   const SkeletonLoader = () => (
     <div className="flex h-screen bg-gray-50">
-      <Sidebar isCollapsed={sidebarCollapsed} onToggle={toggleSidebar} />
+      <Sidebar collapsed={sidebarCollapsed} onToggle={toggleSidebar} />
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header skeleton */}
         <header className="bg-white border-b border-gray-200 px-6 py-4">
@@ -208,7 +208,7 @@ export default function Profile() {
 
   return (
     <div className="flex h-screen bg-gray-50">
-      <Sidebar isCollapsed={sidebarCollapsed} onToggle={toggleSidebar} />
+      <Sidebar collapsed={sidebarCollapsed} onToggle={toggleSidebar} />
 
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}

@@ -5,7 +5,7 @@ import {
   getDoc, 
   addDoc, 
   updateDoc, 
-  deleteDoc, 
+  // deleteDoc, 
   query, 
   where, 
   orderBy, 
@@ -424,7 +424,7 @@ export const seedDemoData = async (userId: string) => {
     };
 
     const docRef = doc(db, 'walletStats', userId);
-    await updateDoc(docRef, walletStats);
+    await updateDoc(docRef, walletStats as any);
 
     console.log('Demo data seeded successfully');
     return true;
