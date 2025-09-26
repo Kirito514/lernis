@@ -21,6 +21,7 @@ const Settings = lazy(() => import("./pages/Settings"));
 const Marketplace = lazy(() => import("./pages/Marketplace"));
 const BuyTokens = lazy(() => import("./pages/BuyTokens"));
 const CertificateHistory = lazy(() => import("./pages/CertificateHistory"));
+const VerifyCertificate = lazy(() => import("./pages/VerifyCertificate"));
 
 export default function App() {
   return (
@@ -264,6 +265,11 @@ export default function App() {
                   <CertificateHistory />
                 </ProtectedRoute>
               } 
+            />
+            {/* Public verification route */}
+            <Route 
+              path="/verify/:certificateId" 
+              element={<VerifyCertificate />} 
             />
           </Routes>
         </Suspense>
