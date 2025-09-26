@@ -9,11 +9,12 @@ import {
   achievementService, 
   transactionService, 
   walletService,
+  dashboardStatsService,
   seedDemoData,
   type Certificate,
   // type Achievement,
   // type Transaction,
-  type WalletStats
+  type DashboardStats
 } from '../services/firebaseService';
 import {
   Bell,
@@ -44,8 +45,8 @@ export default function Dashboard() {
   const [certificates, setCertificates] = useState<Certificate[]>([]);
   // const [achievements, setAchievements] = useState<Achievement[]>([]);
   // const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [walletStats, setWalletStats] = useState<WalletStats | null>(null);
   const [eduTokenBalance, setEduTokenBalance] = useState<LernisTokenBalance | null>(null);
+  const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
   
   const { currentUser, userData } = useAuth();
 
@@ -70,19 +71,26 @@ export default function Dashboard() {
         }
         
         // Load data in parallel with optimized queries
-        const [certs, , , stats, eduBalance] = await Promise.all([
+        const [certs, , , , eduBalance, dashboardStatsData] = await Promise.all([
           certificateService.getCertificates(currentUser.uid),
           achievementService.getAchievements(currentUser.uid),
           transactionService.getTransactions(currentUser.uid),
           walletService.getWalletStats(currentUser.uid),
-          lernisTokenService.getLernisTokenBalance(currentUser.uid)
+          lernisTokenService.getLernisTokenBalance(currentUser.uid),
+          dashboardStatsService.getDashboardStats(currentUser.uid)
         ]);
         
         setCertificates(certs);
         // setAchievements(achievs);
         // setTransactions(trans);
-        setWalletStats(stats);
         setEduTokenBalance(eduBalance);
+        setDashboardStats(dashboardStatsData);
+
+        // Agar dashboard stats yo'q bo'lsa, real-time hisoblash
+        if (!dashboardStatsData) {
+          const realTimeStats = await dashboardStatsService.calculateRealTimeStats(currentUser.uid);
+          setDashboardStats(realTimeStats);
+        }
       } catch (error) {
         console.error('Error loading dashboard data:', error);
       } finally {
@@ -93,25 +101,31 @@ export default function Dashboard() {
     loadData();
   }, [currentUser]);
 
-  // EDU Token balance refresh
+  // Real-time data refresh
   useEffect(() => {
     if (!currentUser) return;
     
-    const refreshEduBalance = async () => {
+    const refreshData = async () => {
       try {
+        // EDU balance yangilash
         const eduBalance = await lernisTokenService.getLernisTokenBalance(currentUser.uid);
         setEduTokenBalance(eduBalance);
-        console.log('Dashboard EDU balance refreshed:', eduBalance);
+        
+        // Dashboard stats yangilash
+        const realTimeStats = await dashboardStatsService.calculateRealTimeStats(currentUser.uid);
+        setDashboardStats(realTimeStats);
+        
+        console.log('Dashboard data refreshed:', { eduBalance, realTimeStats });
       } catch (error) {
-        console.error('Error refreshing EDU balance:', error);
+        console.error('Error refreshing dashboard data:', error);
       }
     };
 
-    // Har 15 soniyada yangilash
-    const interval = setInterval(refreshEduBalance, 15000);
+    // Har 30 soniyada yangilash
+    const interval = setInterval(refreshData, 30000);
     
     // Dastlabki yuklash
-    refreshEduBalance();
+    refreshData();
 
     return () => clearInterval(interval);
   }, [currentUser]);
@@ -119,27 +133,35 @@ export default function Dashboard() {
   const stats = [
     {
       name: 'Certificates',
-      value: certificates.length.toString(),
-      change: `${certificates.filter(c => c.verified).length} verified`,
+      value: dashboardStats ? dashboardStats.totalCertificates.toString() : certificates.length.toString(),
+      change: `${dashboardStats ? dashboardStats.verifiedCertificates : certificates.filter(c => c.verified).length} verified`,
       changeType: 'positive',
       icon: FileText,
       color: 'bg-blue-500'
     },
     {
       name: 'EDU Token Balance',
-      value: eduTokenBalance ? `${eduTokenBalance.balance} EDU` : '100.00 EDU',
-      change: `$${eduTokenBalance?.usdValue || '5.00'} USD`,
+      value: dashboardStats ? `${dashboardStats.eduTokenBalance.toFixed(2)} EDU` : (eduTokenBalance ? `${eduTokenBalance.balance} EDU` : '100.00 EDU'),
+      change: `$${dashboardStats ? (dashboardStats.eduTokenBalance * 0.05).toFixed(2) : (eduTokenBalance?.usdValue || '5.00')} USD`,
       changeType: 'positive',
       icon: Award,
       color: 'bg-green-500'
     },
     {
-      name: 'Wallet Balance',
-      value: walletStats ? `${walletStats.maticBalance} MATIC` : '0 MATIC',
-      change: 'Polygon Network',
-      changeType: 'neutral',
+      name: 'NFTs Owned',
+      value: dashboardStats ? dashboardStats.nftsOwned.toString() : '0',
+      change: `${dashboardStats ? dashboardStats.marketplacePurchases : 0} purchases`,
+      changeType: 'positive',
       icon: CheckCircle,
       color: 'bg-purple-500'
+    },
+    {
+      name: 'Courses Completed',
+      value: dashboardStats ? dashboardStats.coursesCompleted.toString() : certificates.filter(c => c.verified).length.toString(),
+      change: `${dashboardStats ? dashboardStats.weeklyActivity : 0} this week`,
+      changeType: 'positive',
+      icon: Award,
+      color: 'bg-orange-500'
     }
   ];
 
@@ -319,7 +341,7 @@ export default function Dashboard() {
         {/* Main Content Area */}
         <main className="flex-1 overflow-y-auto p-6">
           {/* Stats Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             {stats.map((stat) => (
               <div key={stat.name} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                 <div className="flex items-center justify-between">
@@ -348,35 +370,39 @@ export default function Dashboard() {
             ))}
           </div>
 
-          {/* EDU Token Balance Card */}
+          {/* Real-time Dashboard Stats Card */}
           <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl p-6 border border-blue-200 mb-8">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-4">
                 <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center">
-                  <span className="text-2xl">🎓</span>
+                  <span className="text-2xl">📊</span>
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold text-gray-900 mb-1">EDU Token Balance</h3>
-                  <p className="text-sm text-gray-600 mb-2">Platform Native Token</p>
-                  <div className="flex items-center space-x-4">
+                  <h3 className="text-xl font-bold text-gray-900 mb-1">Real-time Dashboard</h3>
+                  <p className="text-sm text-gray-600 mb-2">Live data from Firebase & localStorage</p>
+                  <div className="flex items-center space-x-6">
                     <div>
-                      <p className="text-sm text-gray-500">Balance</p>
-                      <p className="text-2xl font-bold text-gray-900">{eduTokenBalance?.balance || '100.00'} EDU</p>
+                      <p className="text-sm text-gray-500">EDU Balance</p>
+                      <p className="text-2xl font-bold text-gray-900">{dashboardStats ? dashboardStats.eduTokenBalance.toFixed(2) : (eduTokenBalance?.balance || '100.00')} EDU</p>
                     </div>
                     <div>
-                      <p className="text-sm text-gray-500">USD Value</p>
-                      <p className="text-2xl font-bold text-green-600">${eduTokenBalance?.usdValue || '5.00'}</p>
+                      <p className="text-sm text-gray-500">NFTs Owned</p>
+                      <p className="text-2xl font-bold text-purple-600">{dashboardStats ? dashboardStats.nftsOwned : 0}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500">Weekly Activity</p>
+                      <p className="text-2xl font-bold text-green-600">{dashboardStats ? dashboardStats.weeklyActivity : 0}</p>
                     </div>
                   </div>
                 </div>
               </div>
               <div className="text-right">
                 <Link
-                  to="/dashboard/buy-tokens"
-                  className="inline-flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors duration-200"
+                  to="/dashboard/marketplace"
+                  className="inline-flex items-center space-x-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors duration-200"
                 >
                   <Award className="h-4 w-4" />
-                  <span>Buy More</span>
+                  <span>Browse NFTs</span>
                 </Link>
               </div>
             </div>

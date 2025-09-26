@@ -71,6 +71,45 @@ export interface WalletStats {
   updatedAt: Timestamp;
 }
 
+export interface UserAnalytics {
+  id?: string;
+  userId: string;
+  totalCertificates: number;
+  totalAchievements: number;
+  totalTransactions: number;
+  totalEduTokens: number;
+  totalMaticSpent: number;
+  lastLoginDate: string;
+  totalLoginDays: number;
+  averageSessionTime: number;
+  coursesCompleted: number;
+  certificatesVerified: number;
+  nftsOwned: number;
+  marketplacePurchases: number;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+
+export interface DashboardStats {
+  id?: string;
+  userId: string;
+  totalCertificates: number;
+  verifiedCertificates: number;
+  pendingCertificates: number;
+  totalAchievements: number;
+  totalTransactions: number;
+  eduTokenBalance: number;
+  maticBalance: number;
+  nftsOwned: number;
+  marketplacePurchases: number;
+  coursesCompleted: number;
+  lastActivity: string;
+  weeklyActivity: number;
+  monthlyActivity: number;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+
 // Simple cache for Firebase queries
 const cache = new Map<string, { data: any; timestamp: number }>();
 const CACHE_DURATION = 30000; // 30 seconds
@@ -292,6 +331,183 @@ export const walletService = {
   }
 };
 
+// User Analytics Service
+export const userAnalyticsService = {
+  // User analytics olish
+  async getUserAnalytics(userId: string): Promise<UserAnalytics | null> {
+    const cacheKey = `userAnalytics_${userId}`;
+    const cached = getCachedData(cacheKey);
+    if (cached) return cached;
+    
+    try {
+      const docRef = doc(db, 'userAnalytics', userId);
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        const result = { id: docSnap.id, ...docSnap.data() } as UserAnalytics;
+        setCachedData(cacheKey, result);
+        return result;
+      }
+      return null;
+    } catch (error) {
+      console.error('Error getting user analytics:', error);
+      return null;
+    }
+  },
+
+  // User analytics yangilash
+  async updateUserAnalytics(userId: string, updates: Partial<UserAnalytics>): Promise<boolean> {
+    try {
+      const docRef = doc(db, 'userAnalytics', userId);
+      await updateDoc(docRef, {
+        ...updates,
+        updatedAt: Timestamp.now()
+      });
+      return true;
+    } catch (error) {
+      console.error('Error updating user analytics:', error);
+      return false;
+    }
+  },
+
+  // Yangi user analytics yaratish
+  async createUserAnalytics(analytics: Omit<UserAnalytics, 'id' | 'createdAt' | 'updatedAt'>): Promise<string | null> {
+    try {
+      const now = Timestamp.now();
+      const docRef = await addDoc(collection(db, 'userAnalytics'), {
+        ...analytics,
+        createdAt: now,
+        updatedAt: now
+      });
+      return docRef.id;
+    } catch (error) {
+      console.error('Error creating user analytics:', error);
+      return null;
+    }
+  }
+};
+
+// Dashboard Stats Service
+export const dashboardStatsService = {
+  // Dashboard statistikalarini olish
+  async getDashboardStats(userId: string): Promise<DashboardStats | null> {
+    const cacheKey = `dashboardStats_${userId}`;
+    const cached = getCachedData(cacheKey);
+    if (cached) return cached;
+    
+    try {
+      const docRef = doc(db, 'dashboardStats', userId);
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        const result = { id: docSnap.id, ...docSnap.data() } as DashboardStats;
+        setCachedData(cacheKey, result);
+        return result;
+      }
+      return null;
+    } catch (error) {
+      console.error('Error getting dashboard stats:', error);
+      return null;
+    }
+  },
+
+  // Dashboard statistikalarini yangilash
+  async updateDashboardStats(userId: string, updates: Partial<DashboardStats>): Promise<boolean> {
+    try {
+      const docRef = doc(db, 'dashboardStats', userId);
+      await updateDoc(docRef, {
+        ...updates,
+        updatedAt: Timestamp.now()
+      });
+      return true;
+    } catch (error) {
+      console.error('Error updating dashboard stats:', error);
+      return false;
+    }
+  },
+
+  // Yangi dashboard stats yaratish
+  async createDashboardStats(stats: Omit<DashboardStats, 'id' | 'createdAt' | 'updatedAt'>): Promise<string | null> {
+    try {
+      const now = Timestamp.now();
+      const docRef = await addDoc(collection(db, 'dashboardStats'), {
+        ...stats,
+        createdAt: now,
+        updatedAt: now
+      });
+      return docRef.id;
+    } catch (error) {
+      console.error('Error creating dashboard stats:', error);
+      return null;
+    }
+  },
+
+  // Real-time dashboard stats hisoblash
+  async calculateRealTimeStats(userId: string): Promise<DashboardStats> {
+    try {
+      // Barcha ma'lumotlarni parallel olish
+      const [certificates, achievements, transactions, walletStats, eduBalance] = await Promise.all([
+        certificateService.getCertificates(userId),
+        achievementService.getAchievements(userId),
+        transactionService.getTransactions(userId),
+        walletService.getWalletStats(userId),
+        // EDU token balance localStorage'dan olish
+        Promise.resolve(JSON.parse(localStorage.getItem(`edu_token_balance_${userId}`) || '{"balance": "100.00", "usdValue": "5.00"}'))
+      ]);
+
+      // NFT transaksiyalarini localStorage'dan olish
+      const nftTransactions = JSON.parse(localStorage.getItem(`nft_transactions_${userId}`) || '[]');
+
+      // Statistikalar hisoblash
+      const totalCertificates = certificates.length;
+      const verifiedCertificates = certificates.filter(c => c.verified).length;
+      const pendingCertificates = totalCertificates - verifiedCertificates;
+      const totalAchievements = achievements.length;
+      const totalTransactions = transactions.length;
+      const nftsOwned = nftTransactions.filter((tx: any) => tx.status === 'completed').length;
+      const marketplacePurchases = nftTransactions.length;
+
+      // Haftalik va oylik faoliyat hisoblash
+      const now = new Date();
+      const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+      const weeklyActivity = transactions.filter(tx => 
+        new Date(tx.date) >= weekAgo
+      ).length;
+
+      const monthlyActivity = transactions.filter(tx => 
+        new Date(tx.date) >= monthAgo
+      ).length;
+
+      const dashboardStats: DashboardStats = {
+        userId,
+        totalCertificates,
+        verifiedCertificates,
+        pendingCertificates,
+        totalAchievements,
+        totalTransactions,
+        eduTokenBalance: parseFloat(eduBalance.balance),
+        maticBalance: walletStats?.maticBalance || 0,
+        nftsOwned,
+        marketplacePurchases,
+        coursesCompleted: verifiedCertificates, // Verified certificates as completed courses
+        lastActivity: now.toISOString(),
+        weeklyActivity,
+        monthlyActivity,
+        createdAt: Timestamp.now(),
+        updatedAt: Timestamp.now()
+      };
+
+      // Firebase'ga saqlash
+      await this.updateDashboardStats(userId, dashboardStats);
+
+      return dashboardStats;
+    } catch (error) {
+      console.error('Error calculating real-time stats:', error);
+      throw error;
+    }
+  }
+};
+
 // Demo ma'lumotlar qo'shish
 export const seedDemoData = async (userId: string) => {
   try {
@@ -425,6 +641,45 @@ export const seedDemoData = async (userId: string) => {
 
     const docRef = doc(db, 'walletStats', userId);
     await updateDoc(docRef, walletStats as any);
+
+    // User analytics yaratish
+    const userAnalytics: Omit<UserAnalytics, 'id' | 'createdAt' | 'updatedAt'> = {
+      userId,
+      totalCertificates: demoCertificates.length,
+      totalAchievements: demoAchievements.length,
+      totalTransactions: demoTransactions.length,
+      totalEduTokens: 100.00,
+      totalMaticSpent: 0.004,
+      lastLoginDate: new Date().toISOString(),
+      totalLoginDays: 1,
+      averageSessionTime: 30,
+      coursesCompleted: demoCertificates.length,
+      certificatesVerified: demoCertificates.filter(c => c.verified).length,
+      nftsOwned: 0,
+      marketplacePurchases: 0
+    };
+
+    await userAnalyticsService.createUserAnalytics(userAnalytics);
+
+    // Dashboard stats yaratish
+    const dashboardStats: Omit<DashboardStats, 'id' | 'createdAt' | 'updatedAt'> = {
+      userId,
+      totalCertificates: demoCertificates.length,
+      verifiedCertificates: demoCertificates.filter(c => c.verified).length,
+      pendingCertificates: demoCertificates.filter(c => !c.verified).length,
+      totalAchievements: demoAchievements.length,
+      totalTransactions: demoTransactions.length,
+      eduTokenBalance: 100.00,
+      maticBalance: 0.05,
+      nftsOwned: 0,
+      marketplacePurchases: 0,
+      coursesCompleted: demoCertificates.filter(c => c.verified).length,
+      lastActivity: new Date().toISOString(),
+      weeklyActivity: demoTransactions.length,
+      monthlyActivity: demoTransactions.length
+    };
+
+    await dashboardStatsService.createDashboardStats(dashboardStats);
 
     console.log('Demo data seeded successfully');
     return true;
