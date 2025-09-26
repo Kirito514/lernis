@@ -372,7 +372,12 @@ export default function CertificateHistory() {
                                 <Mail className="h-4 w-4" />
                               </button>
                             )}
-                            <button className="text-gray-400 hover:text-gray-600 transition-colors duration-200">
+                            <button 
+                              onClick={() => {
+                                alert('PDF download feature for certificate history coming soon!');
+                              }}
+                              className="text-green-600 hover:text-green-900 transition-colors duration-200"
+                            >
                               <Download className="h-4 w-4" />
                             </button>
                           </div>

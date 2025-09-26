@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import Sidebar from '../components/Sidebar';
 import { useAuth } from '../contexts/AuthContext';
 import { certificateService } from '../services/firebaseService';
+import QRCode from 'qrcode';
 import {
   // Bell,
   // Search,
@@ -56,6 +57,7 @@ export default function CreateCertificate() {
   const [isLoading, setIsLoading] = useState(false);
   const [showPreview, setShowPreview] = useState(true);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string>('');
   
   const { userData, currentUser } = useAuth();
   
@@ -87,15 +89,35 @@ export default function CreateCertificate() {
     return `CERT-${timestamp}-${random}`.toUpperCase();
   };
 
-  // Initialize certificate ID
+  // Initialize certificate ID and generate QR code
   React.useEffect(() => {
     if (!formData.certificateId) {
+      const newId = generateCertificateId();
       setFormData(prev => ({
         ...prev,
-        certificateId: generateCertificateId()
+        certificateId: newId
       }));
     }
   }, []);
+
+  // Generate QR code when certificate ID changes
+  React.useEffect(() => {
+    if (formData.certificateId) {
+      const verificationUrl = `${window.location.origin}/verify/${formData.certificateId}`;
+      QRCode.toDataURL(verificationUrl, {
+        width: 200,
+        margin: 2,
+        color: {
+          dark: '#000000',
+          light: '#FFFFFF'
+        }
+      }).then(url => {
+        setQrCodeDataUrl(url);
+      }).catch(err => {
+        console.error('Error generating QR code:', err);
+      });
+    }
+  }, [formData.certificateId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -327,7 +349,11 @@ export default function CreateCertificate() {
             {/* QR Code */}
             <div className="absolute bottom-4 left-4">
               <div className="w-16 h-16 bg-white border border-gray-300 flex items-center justify-center">
-                <QrCode className="h-12 w-12 text-gray-400" />
+                {qrCodeDataUrl ? (
+                  <img src={qrCodeDataUrl} alt="QR Code" className="w-14 h-14" />
+                ) : (
+                  <QrCode className="h-12 w-12 text-gray-400" />
+                )}
               </div>
             </div>
           </div>
@@ -720,7 +746,8 @@ export default function CreateCertificate() {
                           type="button"
                           onClick={(e) => {
                             e.preventDefault();
-                            setFormData(prev => ({ ...prev, certificateId: generateCertificateId() }));
+                            const newId = generateCertificateId();
+                            setFormData(prev => ({ ...prev, certificateId: newId }));
                           }}
                           className="px-3 py-2 text-sm text-blue-600 hover:text-blue-800 transition-colors duration-200"
                         >
@@ -857,170 +884,328 @@ export default function CreateCertificate() {
                               return;
                             }
                             
-                            // Generate HTML content for PDF
+                            // Generate beautiful HTML content for PDF
                             const htmlContent = `
                               <!DOCTYPE html>
                               <html>
                                 <head>
                                   <title>Certificate - ${formData.certificateId}</title>
                                   <style>
+                                    @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Inter:wght@300;400;500;600&display=swap');
+                                    
+                                    * { margin: 0; padding: 0; box-sizing: border-box; }
+                                    
                                     body { 
-                                      margin: 0; 
-                                      padding: 20px; 
-                                      font-family: Arial, sans-serif;
-                                      background: white;
-                                    }
-                                    .certificate {
-                                      width: 800px;
-                                      height: 600px;
-                                      border: 2px solid black;
-                                      position: relative;
-                                      background: white;
-                                    }
-                                    .certificate-band {
-                                      width: 80px;
-                                      height: 100%;
-                                      background: ${formData.certificateColor === 'blue' ? '#2563eb' : 
-                                                   formData.certificateColor === 'green' ? '#16a34a' : 
-                                                   formData.certificateColor === 'purple' ? '#9333ea' : '#eab308'};
-                                      position: absolute;
-                                      left: 0;
-                                      top: 0;
+                                      font-family: 'Inter', sans-serif;
+                                      background: #f8fafc;
+                                      padding: 20px;
                                       display: flex;
-                                      align-items: center;
                                       justify-content: center;
-                                    }
-                                    .certificate-text {
-                                      transform: rotate(-90deg);
-                                      color: white;
-                                      font-weight: bold;
-                                      font-size: 18px;
-                                      letter-spacing: 2px;
-                                    }
-                                    .certificate-content {
-                                      margin-left: 80px;
-                                      padding: 40px;
-                                      height: 100%;
-                                      position: relative;
-                                    }
-                                    .certificate-title {
-                                      text-align: center;
-                                      margin-bottom: 40px;
-                                    }
-                                    .student-name {
-                                      font-size: 36px;
-                                      font-weight: bold;
-                                      color: ${formData.certificateColor === 'blue' ? '#2563eb' : 
-                                              formData.certificateColor === 'green' ? '#16a34a' : 
-                                              formData.certificateColor === 'purple' ? '#9333ea' : '#ea580c'};
-                                      text-align: center;
-                                      margin: 20px 0;
-                                    }
-                                    .course-info {
-                                      text-align: center;
-                                      margin: 20px 0;
-                                    }
-                                    .issuer-info {
-                                      text-align: center;
-                                      font-weight: bold;
-                                      margin: 20px 0;
-                                    }
-                                    .signatures {
-                                      position: absolute;
-                                      bottom: 40px;
-                                      left: 40px;
-                                      right: 40px;
-                                    }
-                                    .signature-row {
-                                      display: flex;
-                                      justify-content: space-between;
-                                    }
-                                    .signature-item {
-                                      text-align: center;
-                                      width: 45%;
-                                    }
-                                    .signature-line {
-                                      border-bottom: 2px solid #333;
-                                      height: 40px;
-                                      margin-bottom: 10px;
-                                    }
-                                    .qr-code {
-                                      position: absolute;
-                                      bottom: 20px;
-                                      left: 20px;
-                                      width: 60px;
-                                      height: 60px;
-                                      border: 1px solid #ccc;
-                                      display: flex;
                                       align-items: center;
-                                      justify-content: center;
-                                      font-size: 10px;
-                                      color: #666;
+                                      min-height: 100vh;
                                     }
-                                    .badge {
+                                    
+                                    .certificate-container {
+                                      width: 842px;
+                                      height: 595px;
+                                      background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+                                      border: 3px solid #e2e8f0;
+                                      border-radius: 20px;
+                                      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+                                      position: relative;
+                                      overflow: hidden;
+                                    }
+                                    
+                                    .certificate-border {
                                       position: absolute;
                                       top: 20px;
+                                      left: 20px;
                                       right: 20px;
-                                      width: 80px;
+                                      bottom: 20px;
+                                      border: 2px solid ${formData.certificateColor === 'blue' ? '#3b82f6' : 
+                                                       formData.certificateColor === 'green' ? '#10b981' : 
+                                                       formData.certificateColor === 'purple' ? '#8b5cf6' : '#f59e0b'};
+                                      border-radius: 15px;
+                                      background: white;
+                                    }
+                                    
+                                    .certificate-header {
+                                      position: absolute;
+                                      top: 0;
+                                      left: 0;
+                                      right: 0;
                                       height: 80px;
-                                      background: #fbbf24;
+                                      background: linear-gradient(135deg, ${formData.certificateColor === 'blue' ? '#3b82f6' : 
+                                                                           formData.certificateColor === 'green' ? '#10b981' : 
+                                                                           formData.certificateColor === 'purple' ? '#8b5cf6' : '#f59e0b'} 0%, 
+                                                                           ${formData.certificateColor === 'blue' ? '#1d4ed8' : 
+                                                                           formData.certificateColor === 'green' ? '#059669' : 
+                                                                           formData.certificateColor === 'purple' ? '#7c3aed' : '#d97706'} 100%);
+                                      border-radius: 15px 15px 0 0;
+                                      display: flex;
+                                      align-items: center;
+                                      justify-content: center;
+                                    }
+                                    
+                                    .certificate-title {
+                                      color: white;
+                                      font-family: 'Playfair Display', serif;
+                                      font-size: 28px;
+                                      font-weight: 700;
+                                      letter-spacing: 2px;
+                                      text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+                                    }
+                                    
+                                    .certificate-content {
+                                      padding: 100px 60px 60px;
+                                      height: 100%;
+                                      display: flex;
+                                      flex-direction: column;
+                                      justify-content: space-between;
+                                    }
+                                    
+                                    .main-content {
+                                      text-align: center;
+                                      flex: 1;
+                                      display: flex;
+                                      flex-direction: column;
+                                      justify-content: center;
+                                    }
+                                    
+                                    .certificate-text {
+                                      font-size: 18px;
+                                      color: #64748b;
+                                      margin-bottom: 30px;
+                                      font-weight: 300;
+                                    }
+                                    
+                                    .student-name {
+                                      font-family: 'Playfair Display', serif;
+                                      font-size: 42px;
+                                      font-weight: 700;
+                                      color: ${formData.certificateColor === 'blue' ? '#1e40af' : 
+                                              formData.certificateColor === 'green' ? '#047857' : 
+                                              formData.certificateColor === 'purple' ? '#6d28d9' : '#b45309'};
+                                      margin: 20px 0;
+                                      text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                                    }
+                                    
+                                    .course-info {
+                                      font-size: 24px;
+                                      font-weight: 600;
+                                      color: #374151;
+                                      margin: 20px 0;
+                                    }
+                                    
+                                    .issuer-info {
+                                      font-size: 20px;
+                                      font-weight: 500;
+                                      color: #6b7280;
+                                      margin: 20px 0;
+                                    }
+                                    
+                                    .description {
+                                      font-size: 16px;
+                                      color: #6b7280;
+                                      line-height: 1.6;
+                                      margin: 20px 0;
+                                      max-width: 600px;
+                                      margin-left: auto;
+                                      margin-right: auto;
+                                    }
+                                    
+                                    .date-info {
+                                      font-size: 18px;
+                                      font-weight: 600;
+                                      color: #374151;
+                                      margin: 20px 0;
+                                    }
+                                    
+                                    .signatures-section {
+                                      margin-top: 40px;
+                                      border-top: 2px solid #e5e7eb;
+                                      padding-top: 30px;
+                                    }
+                                    
+                                    .verified-by {
+                                      text-align: center;
+                                      font-size: 16px;
+                                      font-weight: 600;
+                                      color: #374151;
+                                      margin-bottom: 30px;
+                                      letter-spacing: 1px;
+                                    }
+                                    
+                                    .signatures {
+                                      display: flex;
+                                      justify-content: space-between;
+                                      gap: 40px;
+                                    }
+                                    
+                                    .signature-item {
+                                      flex: 1;
+                                      text-align: center;
+                                    }
+                                    
+                                    .signature-line {
+                                      border-bottom: 2px solid #d1d5db;
+                                      height: 50px;
+                                      margin-bottom: 15px;
+                                      position: relative;
+                                    }
+                                    
+                                    .signature-name {
+                                      font-size: 16px;
+                                      font-weight: 600;
+                                      color: #374151;
+                                      margin-bottom: 5px;
+                                    }
+                                    
+                                    .signature-title {
+                                      font-size: 14px;
+                                      color: #6b7280;
+                                    }
+                                    
+                                    .badge {
+                                      position: absolute;
+                                      top: 30px;
+                                      right: 30px;
+                                      width: 100px;
+                                      height: 100px;
+                                      background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
                                       border-radius: 50%;
                                       display: flex;
                                       align-items: center;
                                       justify-content: center;
-                                      font-weight: bold;
-                                      font-size: 12px;
+                                      font-weight: 700;
+                                      font-size: 14px;
                                       text-align: center;
+                                      color: #92400e;
+                                      box-shadow: 0 10px 25px rgba(251, 191, 36, 0.3);
+                                      border: 3px solid #f59e0b;
                                     }
+                                    
+                                    .qr-section {
+                                      position: absolute;
+                                      bottom: 30px;
+                                      left: 30px;
+                                      display: flex;
+                                      align-items: center;
+                                      gap: 15px;
+                                    }
+                                    
+                                    .qr-code {
+                                      width: 80px;
+                                      height: 80px;
+                                      border: 2px solid #e5e7eb;
+                                      border-radius: 10px;
+                                      display: flex;
+                                      align-items: center;
+                                      justify-content: center;
+                                      background: white;
+                                      font-size: 10px;
+                                      color: #6b7280;
+                                      text-align: center;
+                                      line-height: 1.2;
+                                    }
+                                    
+                                    .certificate-id {
+                                      font-size: 12px;
+                                      color: #6b7280;
+                                      font-weight: 500;
+                                    }
+                                    
+                                    .decorative-elements {
+                                      position: absolute;
+                                      top: 50%;
+                                      left: 20px;
+                                      right: 20px;
+                                      height: 2px;
+                                      background: linear-gradient(90deg, transparent 0%, #e5e7eb 20%, #e5e7eb 80%, transparent 100%);
+                                      z-index: 1;
+                                    }
+                                    
+                                    .decorative-elements::before,
+                                    .decorative-elements::after {
+                                      content: '';
+                                      position: absolute;
+                                      top: -8px;
+                                      width: 16px;
+                                      height: 16px;
+                                      background: ${formData.certificateColor === 'blue' ? '#3b82f6' : 
+                                                   formData.certificateColor === 'green' ? '#10b981' : 
+                                                   formData.certificateColor === 'purple' ? '#8b5cf6' : '#f59e0b'};
+                                      border-radius: 50%;
+                                    }
+                                    
+                                    .decorative-elements::before {
+                                      left: 50px;
+                                    }
+                                    
+                                    .decorative-elements::after {
+                                      right: 50px;
+                                    }
+                                    
                                     @media print {
-                                      body { margin: 0; }
-                                      .certificate { 
-                                        width: 100%; 
-                                        height: 100vh; 
-                                        border: none;
+                                      body { 
+                                        background: white; 
+                                        padding: 0;
+                                      }
+                                      .certificate-container { 
+                                        box-shadow: none;
+                                        border: 2px solid #e2e8f0;
                                       }
                                     }
                                   </style>
                                 </head>
                                 <body>
-                                  <div class="certificate">
-                                    <div class="certificate-band">
-                                      <div class="certificate-text">CERTIFICATE</div>
-                                    </div>
-                                    <div class="certificate-content">
+                                  <div class="certificate-container">
+                                    <div class="certificate-border">
+                                      <div class="certificate-header">
+                                        <h1 class="certificate-title">CERTIFICATE OF COMPLETION</h1>
+                                      </div>
+                                      
                                       ${formData.badge ? `<div class="badge">${formData.badge}</div>` : ''}
-                                      <div class="certificate-title">
-                                        <p>This is certify that</p>
-                                        <div class="student-name">${formData.studentName || 'Student Name'}</div>
-                                        <p>has successfully completed</p>
-                                        <div class="course-info">
-                                          <strong>${formData.courseName || 'Course Name'}</strong>
+                                      
+                                      <div class="certificate-content">
+                                        <div class="main-content">
+                                          <p class="certificate-text">This is to certify that</p>
+                                          <h2 class="student-name">${formData.studentName || 'Student Name'}</h2>
+                                          <p class="certificate-text">has successfully completed the course</p>
+                                          <h3 class="course-info">${formData.courseName || 'Course Name'}</h3>
+                                          <p class="issuer-info">On behalf of ${formData.issuer || 'Institution Name'}</p>
+                                          ${formData.description ? `<p class="description">${formData.description}</p>` : ''}
+                                          <p class="date-info">Issued on ${formData.issueDate || new Date().toLocaleDateString()}</p>
                                         </div>
-                                        <div class="issuer-info">
-                                          On Behalf of ${formData.issuer || 'Institution Name'}
-                                        </div>
-                                        <p>${formData.description || 'Certificate of completion'}</p>
-                                        <p><strong>Date: ${formData.issueDate || new Date().toLocaleDateString()}</strong></p>
-                                      </div>
-                                      <div class="signatures">
-                                        <p style="font-weight: bold; margin-bottom: 20px;">VERIFIED BY</p>
-                                        <div class="signature-row">
-                                          <div class="signature-item">
-                                            <div class="signature-line"></div>
-                                            <p><strong>${formData.signatory1Name || 'Papry Naznin'}</strong></p>
-                                            <p>${formData.signatory1Title || 'President'}</p>
+                                        
+                                        <div class="signatures-section">
+                                          <p class="verified-by">VERIFIED BY</p>
+                                          <div class="signatures">
+                                            <div class="signature-item">
+                                              <div class="signature-line"></div>
+                                              <p class="signature-name">${formData.signatory1Name || 'Papry Naznin'}</p>
+                                              <p class="signature-title">${formData.signatory1Title || 'President'}</p>
+                                            </div>
+                                            <div class="signature-item">
+                                              <div class="signature-line"></div>
+                                              <p class="signature-name">${formData.signatory2Name || 'Die Erlan'}</p>
+                                              <p class="signature-title">${formData.signatory2Title || 'Director'}</p>
+                                            </div>
                                           </div>
-                                          <div class="signature-item">
-                                            <div class="signature-line"></div>
-                                            <p><strong>${formData.signatory2Name || 'Die Erlan'}</strong></p>
-                                            <p>${formData.signatory2Title || 'Director'}</p>
-                                          </div>
                                         </div>
                                       </div>
-                                      <div class="qr-code">
-                                        QR Code<br/>
-                                        ${formData.certificateId}
+                                      
+                                      <div class="qr-section">
+                                        <div class="qr-code">
+                                          ${qrCodeDataUrl ? `<img src="${qrCodeDataUrl}" alt="QR Code" style="width: 100%; height: 100%; object-fit: contain;" />` : 'QR Code<br/>Verification'}
+                                        </div>
+                                        <div class="certificate-id">
+                                          Certificate ID:<br/>
+                                          ${formData.certificateId}
+                                        </div>
                                       </div>
+                                      
+                                      <div class="decorative-elements"></div>
                                     </div>
                                   </div>
                                   <script>
