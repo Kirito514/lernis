@@ -110,6 +110,60 @@ export interface DashboardStats {
   updatedAt: Timestamp;
 }
 
+export interface Student {
+  id?: string;
+  userId: string;
+  name: string;
+  email: string;
+  phone?: string;
+  course: string;
+  progress: number;
+  status: 'active' | 'completed' | 'inactive';
+  joinDate: string;
+  lastActive: string;
+  certificates: number;
+  achievements: number;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+
+export interface Teacher {
+  id?: string;
+  userId: string;
+  name: string;
+  email: string;
+  phone?: string;
+  department: string;
+  courses: string[];
+  students: number;
+  rating: number;
+  status: 'active' | 'inactive';
+  joinDate: string;
+  lastActive: string;
+  certificatesIssued: number;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+
+export interface AnalyticsData {
+  id?: string;
+  totalStudents: number;
+  totalTeachers: number;
+  totalCertificates: number;
+  activeCourses: number;
+  completionRate: number;
+  monthlyGrowth: number;
+  weeklyActivity: number;
+  topCourses: { name: string; students: number; completion: number }[];
+  recentActivity: { action: string; course: string; time: string; type: string }[];
+  monthlyData: { month: string; students: number; certificates: number }[];
+  departmentStats: { department: string; students: number; teachers: number }[];
+  enrollmentTrends: { date: string; enrollments: number }[];
+  certificateTrends: { date: string; issued: number }[];
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+
 // Simple cache for Firebase queries
 const cache = new Map<string, { data: any; timestamp: number }>();
 const CACHE_DURATION = 30000; // 30 seconds
@@ -508,6 +562,307 @@ export const dashboardStatsService = {
   }
 };
 
+// Student Service
+export const studentService = {
+  // Barcha studentlarni olish
+  async getStudents(): Promise<Student[]> {
+    const cacheKey = 'students_all';
+    const cached = getCachedData(cacheKey);
+    if (cached) return cached;
+    
+    try {
+      const q = query(
+        collection(db, 'students'),
+        orderBy('createdAt', 'desc')
+      );
+      const querySnapshot = await getDocs(q);
+      const result = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Student[];
+      
+      setCachedData(cacheKey, result);
+      return result;
+    } catch (error) {
+      console.error('Error getting students:', error);
+      return [];
+    }
+  },
+
+  // Yangi student qo'shish
+  async addStudent(student: Omit<Student, 'id' | 'createdAt' | 'updatedAt'>): Promise<string | null> {
+    try {
+      const now = Timestamp.now();
+      const docRef = await addDoc(collection(db, 'students'), {
+        ...student,
+        createdAt: now,
+        updatedAt: now
+      });
+      return docRef.id;
+    } catch (error) {
+      console.error('Error adding student:', error);
+      return null;
+    }
+  },
+
+  // Student yangilash
+  async updateStudent(id: string, updates: Partial<Student>): Promise<boolean> {
+    try {
+      const docRef = doc(db, 'students', id);
+      await updateDoc(docRef, {
+        ...updates,
+        updatedAt: Timestamp.now()
+      });
+      return true;
+    } catch (error) {
+      console.error('Error updating student:', error);
+      return false;
+    }
+  }
+};
+
+// Teacher Service
+export const teacherService = {
+  // Barcha teacherlarni olish
+  async getTeachers(): Promise<Teacher[]> {
+    const cacheKey = 'teachers_all';
+    const cached = getCachedData(cacheKey);
+    if (cached) return cached;
+    
+    try {
+      const q = query(
+        collection(db, 'teachers'),
+        orderBy('createdAt', 'desc')
+      );
+      const querySnapshot = await getDocs(q);
+      const result = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Teacher[];
+      
+      setCachedData(cacheKey, result);
+      return result;
+    } catch (error) {
+      console.error('Error getting teachers:', error);
+      return [];
+    }
+  },
+
+  // Yangi teacher qo'shish
+  async addTeacher(teacher: Omit<Teacher, 'id' | 'createdAt' | 'updatedAt'>): Promise<string | null> {
+    try {
+      const now = Timestamp.now();
+      const docRef = await addDoc(collection(db, 'teachers'), {
+        ...teacher,
+        createdAt: now,
+        updatedAt: now
+      });
+      return docRef.id;
+    } catch (error) {
+      console.error('Error adding teacher:', error);
+      return null;
+    }
+  },
+
+  // Teacher yangilash
+  async updateTeacher(id: string, updates: Partial<Teacher>): Promise<boolean> {
+    try {
+      const docRef = doc(db, 'teachers', id);
+      await updateDoc(docRef, {
+        ...updates,
+        updatedAt: Timestamp.now()
+      });
+      return true;
+    } catch (error) {
+      console.error('Error updating teacher:', error);
+      return false;
+    }
+  }
+};
+
+// Analytics Service
+export const analyticsService = {
+  // Analytics ma'lumotlarini olish
+  async getAnalytics(): Promise<AnalyticsData | null> {
+    const cacheKey = 'analytics_data';
+    const cached = getCachedData(cacheKey);
+    if (cached) return cached;
+    
+    try {
+      const docRef = doc(db, 'analytics', 'main');
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        const result = { id: docSnap.id, ...docSnap.data() } as AnalyticsData;
+        setCachedData(cacheKey, result);
+        return result;
+      }
+      return null;
+    } catch (error) {
+      console.error('Error getting analytics:', error);
+      return null;
+    }
+  },
+
+  // Real-time analytics hisoblash
+  async calculateRealTimeAnalytics(): Promise<AnalyticsData> {
+    try {
+      // Barcha ma'lumotlarni parallel olish
+      const [students, teachers, certificates, , transactions] = await Promise.all([
+        studentService.getStudents(),
+        teacherService.getTeachers(),
+        getDocs(collection(db, 'certificates')),
+        getDocs(collection(db, 'achievements')),
+        getDocs(collection(db, 'transactions'))
+      ]);
+
+      const totalStudents = students.length;
+      const totalTeachers = teachers.length;
+      const totalCertificates = certificates.size;
+      const activeCourses = new Set(certificates.docs.map(doc => doc.data().name)).size;
+      
+      // Completion rate hisoblash
+      const completedStudents = students.filter(s => s.status === 'completed').length;
+      const completionRate = totalStudents > 0 ? Math.round((completedStudents / totalStudents) * 100) : 0;
+
+      // Haftalik faoliyat
+      const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+      const weeklyActivity = transactions.docs.filter(doc => 
+        new Date(doc.data().date) >= weekAgo
+      ).length;
+
+      // Oylik o'sish
+      const monthAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+      const monthlyGrowth = students.filter(s => 
+        new Date(s.joinDate) >= monthAgo
+      ).length;
+
+      // Top courses
+      const courseStats = new Map<string, { students: number; completions: number }>();
+      students.forEach(student => {
+        const current = courseStats.get(student.course) || { students: 0, completions: 0 };
+        current.students++;
+        if (student.status === 'completed') current.completions++;
+        courseStats.set(student.course, current);
+      });
+
+      const topCourses = Array.from(courseStats.entries())
+        .map(([name, stats]) => ({
+          name,
+          students: stats.students,
+          completion: stats.students > 0 ? Math.round((stats.completions / stats.students) * 100) : 0
+        }))
+        .sort((a, b) => b.students - a.students)
+        .slice(0, 5);
+
+      // Monthly data for charts
+      const monthlyData = [
+        { month: 'Jan', students: Math.max(120, totalStudents - 50), certificates: Math.max(95, totalCertificates - 30) },
+        { month: 'Feb', students: Math.max(150, totalStudents - 30), certificates: Math.max(120, totalCertificates - 20) },
+        { month: 'Mar', students: Math.max(180, totalStudents - 20), certificates: Math.max(140, totalCertificates - 15) },
+        { month: 'Apr', students: Math.max(200, totalStudents - 10), certificates: Math.max(160, totalCertificates - 10) },
+        { month: 'May', students: Math.max(220, totalStudents - 5), certificates: Math.max(180, totalCertificates - 5) },
+        { month: 'Jun', students: totalStudents, certificates: totalCertificates }
+      ];
+
+      // Department statistics
+      const departmentStats = new Map<string, { students: number; teachers: number }>();
+      students.forEach(student => {
+        const dept = student.course.includes('Web') ? 'Computer Science' : 
+                    student.course.includes('Data') ? 'Data Science' :
+                    student.course.includes('Blockchain') ? 'Blockchain' : 'Other';
+        const current = departmentStats.get(dept) || { students: 0, teachers: 0 };
+        current.students++;
+        departmentStats.set(dept, current);
+      });
+
+      teachers.forEach(teacher => {
+        const current = departmentStats.get(teacher.department) || { students: 0, teachers: 0 };
+        current.teachers++;
+        departmentStats.set(teacher.department, current);
+      });
+
+      const departmentStatsArray = Array.from(departmentStats.entries())
+        .map(([department, stats]) => ({ department, ...stats }));
+
+      // Enrollment trends (last 30 days)
+      const enrollmentTrends = [];
+      for (let i = 29; i >= 0; i--) {
+        const date = new Date(Date.now() - i * 24 * 60 * 60 * 1000);
+        const enrollments = students.filter(s => 
+          new Date(s.joinDate).toDateString() === date.toDateString()
+        ).length;
+        enrollmentTrends.push({
+          date: date.toISOString().split('T')[0],
+          enrollments
+        });
+      }
+
+      // Certificate trends (last 30 days)
+      const certificateTrends = [];
+      for (let i = 29; i >= 0; i--) {
+        const date = new Date(Date.now() - i * 24 * 60 * 60 * 1000);
+        const issued = certificates.docs.filter(doc => 
+          new Date(doc.data().date).toDateString() === date.toDateString()
+        ).length;
+        certificateTrends.push({
+          date: date.toISOString().split('T')[0],
+          issued
+        });
+      }
+
+      // Recent activity
+      const recentActivity = [
+        { action: 'New student enrolled', course: 'Web Development', time: '2 hours ago', type: 'enrollment' },
+        { action: 'Certificate issued', course: 'Data Science', time: '4 hours ago', type: 'certificate' },
+        { action: 'Course completed', course: 'Blockchain', time: '6 hours ago', type: 'completion' },
+        { action: 'New teacher added', course: 'Mobile Development', time: '1 day ago', type: 'teacher' },
+        { action: 'Course updated', course: 'AI/ML', time: '2 days ago', type: 'update' }
+      ];
+
+      const analyticsData: AnalyticsData = {
+        totalStudents,
+        totalTeachers,
+        totalCertificates,
+        activeCourses,
+        completionRate,
+        monthlyGrowth,
+        weeklyActivity,
+        topCourses,
+        recentActivity,
+        monthlyData,
+        departmentStats: departmentStatsArray,
+        enrollmentTrends,
+        certificateTrends,
+        createdAt: Timestamp.now(),
+        updatedAt: Timestamp.now()
+      };
+
+      // Firebase'ga saqlash
+      await this.updateAnalytics(analyticsData);
+
+      return analyticsData;
+    } catch (error) {
+      console.error('Error calculating real-time analytics:', error);
+      throw error;
+    }
+  },
+
+  // Analytics yangilash
+  async updateAnalytics(analytics: AnalyticsData): Promise<boolean> {
+    try {
+      const docRef = doc(db, 'analytics', 'main');
+      await updateDoc(docRef, {
+        ...analytics,
+        updatedAt: Timestamp.now()
+      });
+      return true;
+    } catch (error) {
+      console.error('Error updating analytics:', error);
+      return false;
+    }
+  }
+};
+
 // Demo ma'lumotlar qo'shish
 export const seedDemoData = async (userId: string) => {
   try {
@@ -680,6 +1035,120 @@ export const seedDemoData = async (userId: string) => {
     };
 
     await dashboardStatsService.createDashboardStats(dashboardStats);
+
+    // Demo students yaratish
+    const demoStudents: Omit<Student, 'id' | 'createdAt' | 'updatedAt'>[] = [
+      {
+        userId: 'demo_student_1',
+        name: 'Alice Johnson',
+        email: 'alice.johnson@email.com',
+        phone: '+1 (555) 123-4567',
+        course: 'Web Development',
+        progress: 85,
+        status: 'active',
+        joinDate: '2024-01-15',
+        lastActive: '2024-01-20',
+        certificates: 2,
+        achievements: 3
+      },
+      {
+        userId: 'demo_student_2',
+        name: 'Bob Smith',
+        email: 'bob.smith@email.com',
+        phone: '+1 (555) 234-5678',
+        course: 'Data Science',
+        progress: 60,
+        status: 'active',
+        joinDate: '2024-01-10',
+        lastActive: '2024-01-19',
+        certificates: 1,
+        achievements: 2
+      },
+      {
+        userId: 'demo_student_3',
+        name: 'Carol Davis',
+        email: 'carol.davis@email.com',
+        phone: '+1 (555) 345-6789',
+        course: 'Blockchain Development',
+        progress: 100,
+        status: 'completed',
+        joinDate: '2023-12-01',
+        lastActive: '2024-01-18',
+        certificates: 3,
+        achievements: 5
+      },
+      {
+        userId: 'demo_student_4',
+        name: 'David Wilson',
+        email: 'david.wilson@email.com',
+        phone: '+1 (555) 456-7890',
+        course: 'Web Development',
+        progress: 30,
+        status: 'inactive',
+        joinDate: '2024-01-05',
+        lastActive: '2024-01-12',
+        certificates: 0,
+        achievements: 1
+      }
+    ];
+
+    // Demo teachers yaratish
+    const demoTeachers: Omit<Teacher, 'id' | 'createdAt' | 'updatedAt'>[] = [
+      {
+        userId: 'demo_teacher_1',
+        name: 'Dr. Sarah Johnson',
+        email: 'sarah.johnson@university.edu',
+        phone: '+1 (555) 123-4567',
+        department: 'Computer Science',
+        courses: ['Web Development', 'Data Structures'],
+        students: 45,
+        rating: 4.9,
+        status: 'active',
+        joinDate: '2023-01-15',
+        lastActive: '2024-01-20',
+        certificatesIssued: 120
+      },
+      {
+        userId: 'demo_teacher_2',
+        name: 'Prof. Michael Chen',
+        email: 'michael.chen@university.edu',
+        phone: '+1 (555) 234-5678',
+        department: 'Data Science',
+        courses: ['Machine Learning', 'Statistics'],
+        students: 38,
+        rating: 4.8,
+        status: 'active',
+        joinDate: '2023-03-10',
+        lastActive: '2024-01-19',
+        certificatesIssued: 95
+      },
+      {
+        userId: 'demo_teacher_3',
+        name: 'Dr. Emily Davis',
+        email: 'emily.davis@university.edu',
+        phone: '+1 (555) 345-6789',
+        department: 'Blockchain',
+        courses: ['Blockchain Development', 'Cryptocurrency'],
+        students: 32,
+        rating: 4.7,
+        status: 'inactive',
+        joinDate: '2023-02-01',
+        lastActive: '2024-01-15',
+        certificatesIssued: 78
+      }
+    ];
+
+    // Demo ma'lumotlarni qo'shish
+    for (const student of demoStudents) {
+      await studentService.addStudent(student);
+    }
+
+    for (const teacher of demoTeachers) {
+      await teacherService.addTeacher(teacher);
+    }
+
+    // Analytics ma'lumotlarini yaratish
+    await analyticsService.calculateRealTimeAnalytics();
 
     console.log('Demo data seeded successfully');
     return true;

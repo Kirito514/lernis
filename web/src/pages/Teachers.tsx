@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
 import { useAuth } from '../contexts/AuthContext';
+import { teacherService, type Teacher } from '../services/firebaseService';
 import {
   Bell,
   Search,
@@ -21,18 +22,27 @@ import {
 export default function Teachers() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [teachers, setTeachers] = useState<Teacher[]>([]);
   const { userData } = useAuth();
 
   const toggleSidebar = () => {
     setSidebarCollapsed(!sidebarCollapsed);
   };
 
-  // Simulate loading
+  // Load teachers data
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setLoading(false);
-    }, 1000);
-    return () => clearTimeout(timer);
+    const loadTeachers = async () => {
+      try {
+        const teachersData = await teacherService.getTeachers();
+        setTeachers(teachersData);
+      } catch (error) {
+        console.error('Error loading teachers:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadTeachers();
   }, []);
 
   // Skeleton loading component
@@ -91,48 +101,7 @@ export default function Teachers() {
     return <SkeletonLoader />;
   }
 
-  // Mock teachers data
-  const teachers = [
-    {
-      id: 1,
-      name: 'Dr. Sarah Johnson',
-      email: 'sarah.johnson@university.edu',
-      phone: '+1 (555) 123-4567',
-      department: 'Computer Science',
-      courses: ['Web Development', 'Data Structures'],
-      students: 45,
-      rating: 4.9,
-      status: 'active',
-      joinDate: '2023-01-15',
-      lastActive: '2024-01-20'
-    },
-    {
-      id: 2,
-      name: 'Prof. Michael Chen',
-      email: 'michael.chen@university.edu',
-      phone: '+1 (555) 234-5678',
-      department: 'Data Science',
-      courses: ['Machine Learning', 'Statistics'],
-      students: 38,
-      rating: 4.8,
-      status: 'active',
-      joinDate: '2023-03-10',
-      lastActive: '2024-01-19'
-    },
-    {
-      id: 3,
-      name: 'Dr. Emily Davis',
-      email: 'emily.davis@university.edu',
-      phone: '+1 (555) 345-6789',
-      department: 'Blockchain',
-      courses: ['Blockchain Development', 'Cryptocurrency'],
-      students: 32,
-      rating: 4.7,
-      status: 'inactive',
-      joinDate: '2023-02-01',
-      lastActive: '2024-01-15'
-    }
-  ];
+  // Real teachers data from Firebase
 
   const getStatusColor = (status: string) => {
     switch (status) {

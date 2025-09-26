@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
 import { useAuth } from '../contexts/AuthContext';
+import { studentService, type Student } from '../services/firebaseService';
 import {
   Bell,
   Search,
@@ -19,18 +20,27 @@ import {
 export default function Students() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [students, setStudents] = useState<Student[]>([]);
   const { userData } = useAuth();
 
   const toggleSidebar = () => {
     setSidebarCollapsed(!sidebarCollapsed);
   };
 
-  // Simulate loading
+  // Load students data
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setLoading(false);
-    }, 1000);
-    return () => clearTimeout(timer);
+    const loadStudents = async () => {
+      try {
+        const studentsData = await studentService.getStudents();
+        setStudents(studentsData);
+      } catch (error) {
+        console.error('Error loading students:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadStudents();
   }, []);
 
   // Skeleton loading component
@@ -102,53 +112,7 @@ export default function Students() {
     return <SkeletonLoader />;
   }
 
-  // Mock students data
-  const students = [
-    {
-      id: 1,
-      name: 'Alice Johnson',
-      email: 'alice.johnson@email.com',
-      phone: '+1 (555) 123-4567',
-      course: 'Web Development',
-      progress: 85,
-      status: 'active',
-      joinDate: '2024-01-15',
-      lastActive: '2024-01-20'
-    },
-    {
-      id: 2,
-      name: 'Bob Smith',
-      email: 'bob.smith@email.com',
-      phone: '+1 (555) 234-5678',
-      course: 'Data Science',
-      progress: 60,
-      status: 'active',
-      joinDate: '2024-01-10',
-      lastActive: '2024-01-19'
-    },
-    {
-      id: 3,
-      name: 'Carol Davis',
-      email: 'carol.davis@email.com',
-      phone: '+1 (555) 345-6789',
-      course: 'Blockchain Development',
-      progress: 100,
-      status: 'completed',
-      joinDate: '2023-12-01',
-      lastActive: '2024-01-18'
-    },
-    {
-      id: 4,
-      name: 'David Wilson',
-      email: 'david.wilson@email.com',
-      phone: '+1 (555) 456-7890',
-      course: 'Web Development',
-      progress: 30,
-      status: 'inactive',
-      joinDate: '2024-01-05',
-      lastActive: '2024-01-12'
-    }
-  ];
+  // Real students data from Firebase
 
   const getStatusColor = (status: string) => {
     switch (status) {
