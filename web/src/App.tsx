@@ -22,6 +22,7 @@ const Marketplace = lazy(() => import("./pages/Marketplace"));
 const BuyTokens = lazy(() => import("./pages/BuyTokens"));
 const CertificateHistory = lazy(() => import("./pages/CertificateHistory"));
 const VerifyCertificate = lazy(() => import("./pages/VerifyCertificate"));
+const DashboardVerification = lazy(() => import("./pages/DashboardVerification"));
 
 export default function App() {
   return (
@@ -190,7 +191,7 @@ export default function App() {
               path="/dashboard/verification" 
               element={
                 <ProtectedRoute>
-                  <Analytics />
+                  <DashboardVerification />
                 </ProtectedRoute>
               } 
             />
@@ -198,7 +199,7 @@ export default function App() {
               path="/dashboard/verification/log" 
               element={
                 <ProtectedRoute>
-                  <Analytics />
+                  <CertificateHistory />
                 </ProtectedRoute>
               } 
             />
