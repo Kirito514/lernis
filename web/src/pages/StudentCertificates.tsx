@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import Sidebar from '../components/Sidebar';
 import {
   FileText,
   Download,
@@ -39,6 +40,7 @@ export default function StudentCertificates() {
   const [certificates, setCertificates] = useState<StudentCertificate[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'received' | 'viewed'>('all');
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   useEffect(() => {
     loadStudentCertificates();
@@ -370,28 +372,41 @@ export default function StudentCertificates() {
     }
   };
 
+  const toggleSidebar = () => {
+    setSidebarCollapsed(!sidebarCollapsed);
+  };
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg mx-auto mb-4">
-            <div className="w-8 h-8 border-2 border-white border-t-transparent rounded-full animate-spin" />
+      <div className="flex h-screen bg-gray-50">
+        <Sidebar collapsed={sidebarCollapsed} onToggle={toggleSidebar} />
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <div className="flex-1 flex items-center justify-center">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg mx-auto mb-4">
+                <div className="w-8 h-8 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              </div>
+              <p className="text-gray-600">Loading your certificates...</p>
+            </div>
           </div>
-          <p className="text-gray-600">Loading your certificates...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <div className="flex h-screen bg-gray-50">
+      {/* Sidebar */}
+      <Sidebar collapsed={sidebarCollapsed} onToggle={toggleSidebar} />
+
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Header */}
+        <header className="bg-white border-b border-gray-200 px-6 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">My Certificates</h1>
-              <p className="mt-2 text-gray-600">Certificates sent to {currentUser?.email}</p>
+              <h1 className="text-2xl font-bold text-gray-900">My Certificates</h1>
+              <p className="text-sm text-gray-600">Certificates sent to {currentUser?.email}</p>
             </div>
             <div className="flex items-center space-x-4">
               <div className="text-sm text-gray-600">
@@ -399,10 +414,10 @@ export default function StudentCertificates() {
               </div>
             </div>
           </div>
-        </div>
-      </div>
+        </header>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Main Content */}
+        <main className="flex-1 overflow-y-auto p-6">
         {/* Filter Tabs */}
         <div className="mb-6">
           <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg w-fit">
@@ -500,6 +515,7 @@ export default function StudentCertificates() {
             </p>
           </div>
         )}
+        </main>
       </div>
     </div>
   );
