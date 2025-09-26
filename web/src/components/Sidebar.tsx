@@ -334,7 +334,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
             <span className="text-3xl font-black tracking-wider text-blue-600 drop-shadow-lg">Lernis</span>
           </div>
         )}
-          <button
+        <button
           onClick={onToggle}
           className="p-1.5 rounded-lg hover:bg-gray-50 transition-all duration-200"
         >
@@ -343,30 +343,30 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
           ) : (
             <ChevronLeft className="h-4 w-4 text-gray-600" />
           )}
-          </button>
-        </div>
+        </button>
+      </div>
 
-          {/* User Role Badge */}
-          {!collapsed && (
-            <div className="px-4 py-2 border-b border-gray-200">
-              <div className="flex items-center justify-center space-x-2">
-                <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
-                  userData?.role === 'admin' ? 'bg-red-100 text-red-800' :
-                  userData?.role === 'teacher' ? 'bg-blue-100 text-blue-800' :
-                  userData?.role === 'organization' ? 'bg-purple-100 text-purple-800' :
-                  'bg-green-100 text-green-800'
-                }`}>
-                  {userData?.role === 'admin' ? '👑 Admin' :
-                   userData?.role === 'teacher' ? '👨‍🏫 Teacher' :
-                   userData?.role === 'organization' ? '🏢 Organization' :
-                   '🎓 Student'}
-                </span>
-                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-mono bg-gray-100 text-gray-700">
-                  ID: {userData?.userId || 'N/A'}
-                </span>
-              </div>
-            </div>
-          )}
+      {/* User Role Badge */}
+      {!collapsed && (
+        <div className="px-4 py-2 border-b border-gray-200">
+          <div className="flex items-center justify-center space-x-2">
+            <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+              userData?.role === 'admin' ? 'bg-red-100 text-red-800' :
+              userData?.role === 'teacher' ? 'bg-blue-100 text-blue-800' :
+              userData?.role === 'organization' ? 'bg-purple-100 text-purple-800' :
+              'bg-green-100 text-green-800'
+            }`}>
+              {userData?.role === 'admin' ? '👑 Admin' :
+               userData?.role === 'teacher' ? '👨‍🏫 Teacher' :
+               userData?.role === 'organization' ? '🏢 Organization' :
+               '🎓 Student'}
+            </span>
+            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-mono bg-gray-100 text-gray-700">
+              ID: {userData?.userId || 'N/A'}
+            </span>
+          </div>
+        </div>
+      )}
 
 
       {/* Navigation */}
