@@ -20,6 +20,7 @@ const Analytics = lazy(() => import("./pages/Analytics"));
 const Settings = lazy(() => import("./pages/Settings"));
 const Marketplace = lazy(() => import("./pages/Marketplace"));
 const BuyTokens = lazy(() => import("./pages/BuyTokens"));
+const CertificateHistory = lazy(() => import("./pages/CertificateHistory"));
 
 export default function App() {
   return (
@@ -253,6 +254,14 @@ export default function App() {
               element={
                 <ProtectedRoute>
                   <WalletPage />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/dashboard/certificate-history" 
+              element={
+                <ProtectedRoute>
+                  <CertificateHistory />
                 </ProtectedRoute>
               } 
             />

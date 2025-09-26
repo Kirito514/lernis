@@ -152,6 +152,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
             children: [
               { name: 'All Certificates', href: '/dashboard/certificates' },
               { name: 'Create New', href: '/dashboard/certificates/create' },
+              { name: 'Certificate History', href: '/dashboard/certificate-history' },
               { name: 'Templates', href: '/dashboard/certificates/templates' },
               { name: 'Bulk Upload', href: '/dashboard/certificates/bulk' }
             ]
