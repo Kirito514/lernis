@@ -226,12 +226,6 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
             href: '/dashboard/buy-tokens',
             icon: Coins,
             current: location.pathname === '/dashboard/buy-tokens'
-          },
-          {
-            name: 'Verification',
-            href: '/dashboard/verification',
-            icon: Shield,
-            current: location.pathname === '/dashboard/verification'
           }
         ];
 
