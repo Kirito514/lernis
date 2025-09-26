@@ -75,6 +75,12 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
             current: location.pathname === '/dashboard/buy-tokens'
           },
           {
+            name: 'Verification',
+            href: '/dashboard/verification',
+            icon: Shield,
+            current: location.pathname === '/dashboard/verification'
+          },
+          {
             name: 'Profile',
             href: '/dashboard/profile',
             icon: User,
@@ -128,6 +134,12 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
             href: '/dashboard/buy-tokens',
             icon: Coins,
             current: location.pathname === '/dashboard/buy-tokens'
+          },
+          {
+            name: 'Verification',
+            href: '/dashboard/verification',
+            icon: Shield,
+            current: location.pathname === '/dashboard/verification'
           },
           {
             name: 'Profile',
@@ -214,6 +226,12 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
             href: '/dashboard/buy-tokens',
             icon: Coins,
             current: location.pathname === '/dashboard/buy-tokens'
+          },
+          {
+            name: 'Verification',
+            href: '/dashboard/verification',
+            icon: Shield,
+            current: location.pathname === '/dashboard/verification'
           }
         ];
 
@@ -270,6 +288,12 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
             href: '/dashboard/buy-tokens',
             icon: Coins,
             current: location.pathname === '/dashboard/buy-tokens'
+          },
+          {
+            name: 'Verification',
+            href: '/dashboard/verification',
+            icon: Shield,
+            current: location.pathname === '/dashboard/verification'
           },
           {
             name: 'Settings',

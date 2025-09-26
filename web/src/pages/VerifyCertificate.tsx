@@ -39,34 +39,57 @@ export default function VerifyCertificate() {
         // Simulate verification process
         await new Promise(resolve => setTimeout(resolve, 1500));
         
-        // Try to find certificate in localStorage (simulated database)
+        // Try to find certificate in multiple sources
+        let foundCertificate = null;
+
+        // 1. Check localStorage for certificates
         const allCertificates = JSON.parse(localStorage.getItem('certificates') || '[]');
-        const foundCertificate = allCertificates.find((cert: any) => 
+        foundCertificate = allCertificates.find((cert: any) => 
           cert.certificateId === certificateId || cert.id === certificateId
         );
+
+        // 2. Check localStorage for certificate creation records
+        if (!foundCertificate) {
+          const creationRecords = JSON.parse(localStorage.getItem('certificate_creation_records') || '[]');
+          foundCertificate = creationRecords.find((record: any) => 
+            record.certificateId === certificateId || record.id === certificateId
+          );
+        }
+
+        // 3. Check localStorage for NFT transactions (minted certificates)
+        if (!foundCertificate) {
+          const nftTransactions = JSON.parse(localStorage.getItem('nft_transactions') || '[]');
+          foundCertificate = nftTransactions.find((tx: any) => 
+            tx.certificateId === certificateId || tx.id === certificateId
+          );
+        }
+
+        // 4. Check localStorage for email records
+        if (!foundCertificate) {
+          const emailRecords = JSON.parse(localStorage.getItem('email_records') || '[]');
+          foundCertificate = emailRecords.find((record: any) => 
+            record.certificateId === certificateId || record.id === certificateId
+          );
+        }
+
+        // 5. Try Firebase as final fallback
+        if (!foundCertificate) {
+          try {
+            const firebaseCerts = await certificateService.getCertificates('all');
+            foundCertificate = firebaseCerts.find(cert => 
+              cert.id === certificateId || (cert as any).certificateId === certificateId
+            );
+          } catch (firebaseError) {
+            console.error('Firebase error:', firebaseError);
+          }
+        }
 
         if (foundCertificate) {
           setCertificate(foundCertificate);
           setVerificationStatus('valid');
         } else {
-          // Try Firebase as fallback
-          try {
-            const firebaseCerts = await certificateService.getCertificates('all');
-            const firebaseCert = firebaseCerts.find(cert => 
-              cert.id === certificateId || (cert as any).certificateId === certificateId
-            );
-            
-            if (firebaseCert) {
-              setCertificate(firebaseCert);
-              setVerificationStatus('valid');
-            } else {
-              setVerificationStatus('invalid');
-              setError('Certificate not found or invalid');
-            }
-          } catch (firebaseError) {
-            setVerificationStatus('invalid');
-            setError('Certificate not found or invalid');
-          }
+          setVerificationStatus('invalid');
+          setError('Certificate not found or invalid');
         }
       } catch (err) {
         setVerificationStatus('invalid');

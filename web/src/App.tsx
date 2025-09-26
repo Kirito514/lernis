@@ -266,6 +266,14 @@ export default function App() {
                 </ProtectedRoute>
               } 
             />
+            <Route 
+              path="/dashboard/verification" 
+              element={
+                <ProtectedRoute>
+                  <VerifyCertificate />
+                </ProtectedRoute>
+              } 
+            />
             {/* Public verification route */}
             <Route 
               path="/verify/:certificateId" 
