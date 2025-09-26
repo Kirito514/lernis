@@ -44,7 +44,14 @@ export default function CreateCertificate() {
     specialization: '',
     certificateId: '',
     logo: null as File | null,
-    signature: null as File | null
+    signature1: null as File | null,
+    signature2: null as File | null,
+    signatory1Name: '',
+    signatory1Title: '',
+    signatory2Name: '',
+    signatory2Title: '',
+    badge: '',
+    certificateColor: 'yellow' // yellow, blue, green, purple
   });
   const [isLoading, setIsLoading] = useState(false);
   const [showPreview, setShowPreview] = useState(true);
@@ -108,7 +115,21 @@ export default function CreateCertificate() {
         image: '/api/placeholder/200/150', // Placeholder image
         verified: true, // Auto-verify for now
         hash: `0x${Math.random().toString(16).substr(2, 8)}`, // Simulated blockchain hash
-        userId: currentUser!.uid
+        userId: currentUser!.uid,
+        // New fields for the enhanced certificate
+        studentName: formData.studentName,
+        studentEmail: formData.studentEmail,
+        grade: formData.grade,
+        certificateId: formData.certificateId,
+        badge: formData.badge,
+        certificateColor: formData.certificateColor,
+        signatory1Name: formData.signatory1Name,
+        signatory1Title: formData.signatory1Title,
+        signatory2Name: formData.signatory2Name,
+        signatory2Title: formData.signatory2Title,
+        duration: formData.duration,
+        hours: formData.hours,
+        specialization: formData.specialization
       };
 
       console.log('Certificate data:', certificateData);
@@ -169,7 +190,14 @@ export default function CreateCertificate() {
       specialization: '',
       certificateId: generateCertificateId(),
       logo: null,
-      signature: null
+      signature1: null,
+      signature2: null,
+      signatory1Name: '',
+      signatory1Title: '',
+      signatory2Name: '',
+      signatory2Title: '',
+      badge: '',
+      certificateColor: 'yellow'
     });
   };
 
@@ -191,67 +219,116 @@ export default function CreateCertificate() {
 
   // Certificate Preview Component
   const CertificatePreview = () => {
-    const getTemplateStyle = () => {
-      switch (selectedTemplate) {
-        case 'modern':
-          return 'bg-gradient-to-br from-blue-50 to-indigo-100 border-2 border-blue-200';
-        case 'minimal':
-          return 'bg-white border border-gray-300';
-        case 'gold':
-          return 'bg-gradient-to-br from-yellow-50 to-amber-100 border-4 border-yellow-400';
-        default:
-          return 'bg-gradient-to-br from-gray-50 to-blue-50 border-2 border-gray-300';
+    const getColorClasses = () => {
+      switch (formData.certificateColor) {
+        case 'blue':
+          return {
+            band: 'bg-blue-600',
+            name: 'text-blue-600'
+          };
+        case 'green':
+          return {
+            band: 'bg-green-600',
+            name: 'text-green-600'
+          };
+        case 'purple':
+          return {
+            band: 'bg-purple-600',
+            name: 'text-purple-600'
+          };
+        default: // yellow
+          return {
+            band: 'bg-yellow-500',
+            name: 'text-orange-600'
+          };
       }
     };
 
+    const colors = getColorClasses();
+
     return (
-      <div className={`w-full max-w-md mx-auto p-8 rounded-lg shadow-lg ${getTemplateStyle()}`}>
-        {/* Header */}
-        <div className="text-center mb-6">
-          <div className="flex items-center justify-center mb-4">
-            <GraduationCap className="h-8 w-8 text-blue-600 mr-2" />
-            <h1 className="text-2xl font-bold text-gray-800">Certificate of Completion</h1>
-          </div>
-          <div className="h-px bg-gray-300 mb-4"></div>
-        </div>
-
-        {/* Content */}
-        <div className="text-center mb-6">
-          <p className="text-gray-600 mb-4">This is to certify that</p>
-          <h2 className="text-3xl font-bold text-gray-800 mb-4 border-b-2 border-blue-500 pb-2">
-            {formData.studentName || 'Student Name'}
-          </h2>
-          <p className="text-gray-600 mb-2">has successfully completed</p>
-          <h3 className="text-xl font-semibold text-blue-600 mb-4">
-            {formData.courseName || 'Course Name'}
-          </h3>
-          {formData.grade && (
-            <p className="text-lg text-gray-700 mb-4">Grade: <span className="font-bold">{formData.grade}</span></p>
-          )}
-        </div>
-
-        {/* Footer */}
-        <div className="mt-8">
-          <div className="grid grid-cols-2 gap-4 text-sm">
-            <div>
-              <p className="text-gray-600">Issued by:</p>
-              <p className="font-semibold">{formData.issuer || 'Institution Name'}</p>
-            </div>
-            <div>
-              <p className="text-gray-600">Date:</p>
-              <p className="font-semibold">{formData.issueDate || 'YYYY-MM-DD'}</p>
+      <div className="w-full max-w-4xl mx-auto bg-white border-2 border-black shadow-2xl">
+        {/* Certificate Layout */}
+        <div className="flex min-h-[600px]">
+          {/* Left Certificate Band */}
+          <div className={`w-20 ${colors.band} flex items-center justify-center`}>
+            <div className="transform -rotate-90 text-white font-bold text-lg tracking-wider">
+              CERTIFICATE
             </div>
           </div>
-          
-          {/* Certificate ID */}
-          <div className="mt-4 text-center">
-            <p className="text-xs text-gray-500">Certificate ID: {formData.certificateId}</p>
-          </div>
 
-          {/* QR Code Placeholder */}
-          <div className="mt-4 flex justify-center">
-            <div className="w-16 h-16 bg-gray-200 rounded flex items-center justify-center">
-              <QrCode className="h-8 w-8 text-gray-400" />
+          {/* Main Content */}
+          <div className="flex-1 p-8 relative">
+            {/* Background Pattern */}
+            <div className="absolute inset-0 opacity-5">
+              <div className="w-full h-full" style={{
+                backgroundImage: `repeating-linear-gradient(45deg, #000 0px, #000 1px, transparent 1px, transparent 20px)`
+              }}></div>
+            </div>
+
+            {/* Content */}
+            <div className="relative z-10">
+              {/* Header */}
+              <div className="text-center mb-8">
+                <p className="text-gray-600 text-sm mb-4">This is certify that</p>
+                <h2 className={`text-4xl font-bold ${colors.name} mb-6`}>
+                  {formData.studentName || 'MR. RAZIB FERGUSON'}
+                </h2>
+                <p className="text-gray-600 text-sm mb-4">
+                  {formData.description || 'Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore'}
+                </p>
+                <p className="text-gray-800 font-semibold text-lg mb-4">
+                  On Behalf of {formData.issuer || 'Lorem Ipsum Ltd'}
+                </p>
+                <p className="text-gray-600 text-sm">
+                  {formData.description || 'Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt sed do eiusmod te sed do eiusmod te ut labore et dolore magna aliqua. Ut enim ad minim veniamaboris nisi, '}
+                  <span className="font-semibold">{formData.issueDate || 'October 31, 2016'}</span>
+                </p>
+              </div>
+
+              {/* Badge */}
+              {formData.badge && (
+                <div className="absolute top-4 right-4">
+                  <div className="bg-yellow-400 w-24 h-24 rounded-full flex items-center justify-center relative">
+                    <div className="text-black font-bold text-xs text-center">
+                      {formData.badge}
+                    </div>
+                    <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-8 border-l-transparent border-r-transparent border-t-yellow-400"></div>
+                  </div>
+                </div>
+              )}
+
+              {/* Signatures */}
+              <div className="mt-16">
+                <p className="text-gray-800 font-bold text-sm mb-6">VERIFIED BY</p>
+                <div className="grid grid-cols-2 gap-8">
+                  <div className="text-center">
+                    <div className="h-16 border-b-2 border-gray-400 mb-2"></div>
+                    <p className="text-gray-800 font-semibold text-sm">
+                      {formData.signatory1Name || 'Papry Naznin'}
+                    </p>
+                    <p className="text-gray-600 text-xs">
+                      {formData.signatory1Title || 'President'}
+                    </p>
+                  </div>
+                  <div className="text-center">
+                    <div className="h-16 border-b-2 border-gray-400 mb-2"></div>
+                    <p className="text-gray-800 font-semibold text-sm">
+                      {formData.signatory2Name || 'Die Erlan'}
+                    </p>
+                    <p className="text-gray-600 text-xs">
+                      {formData.signatory2Title || 'Director'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* QR Code */}
+            <div className="absolute bottom-4 left-4">
+              <div className="w-16 h-16 bg-white border border-gray-300 flex items-center justify-center">
+                <QrCode className="h-12 w-12 text-gray-400" />
+              </div>
             </div>
           </div>
         </div>
@@ -343,7 +420,7 @@ export default function CreateCertificate() {
                     Create Another Certificate
                   </button>
                   <button
-                    onClick={() => window.location.href = '/dashboard/my-certificates'}
+                    onClick={() => window.location.href = '/dashboard/certificates'}
                     className="flex items-center gap-2 px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors duration-200"
                   >
                     <FileText className="h-4 w-4" />
@@ -361,7 +438,7 @@ export default function CreateCertificate() {
                 <p className="text-sm text-gray-600 mt-1">Fill in the details to create a new certificate</p>
               </div>
 
-              <form onSubmit={handleSubmit} className="p-6">
+              <div className="p-6">
                 {/* Step 1: Basic Information */}
                 {currentStep === 1 && (
                   <div className="space-y-6">
@@ -491,52 +568,114 @@ export default function CreateCertificate() {
                       <p className="text-sm text-gray-600">Add more information about the certificate</p>
                     </div>
 
-                    {/* Additional Information */}
+                    {/* Badge */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        <Award className="h-4 w-4 inline mr-1" />
+                        Badge (e.g., "Best Developer")
+                      </label>
+                      <input
+                        type="text"
+                        name="badge"
+                        value={formData.badge}
+                        onChange={handleInputChange}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="e.g., Best Developer, Top Performer"
+                      />
+                    </div>
+
+                    {/* Color Selection */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        <Palette className="h-4 w-4 inline mr-1" />
+                        Certificate Color
+                      </label>
+                      <div className="grid grid-cols-4 gap-3">
+                        {[
+                          { value: 'yellow', label: 'Yellow', color: 'bg-yellow-500' },
+                          { value: 'blue', label: 'Blue', color: 'bg-blue-600' },
+                          { value: 'green', label: 'Green', color: 'bg-green-600' },
+                          { value: 'purple', label: 'Purple', color: 'bg-purple-600' }
+                        ].map((color) => (
+                          <div
+                            key={color.value}
+                            onClick={() => setFormData(prev => ({ ...prev, certificateColor: color.value }))}
+                            className={`p-3 border-2 rounded-lg cursor-pointer transition-all duration-200 ${
+                              formData.certificateColor === color.value
+                                ? 'border-blue-500 bg-blue-50'
+                                : 'border-gray-200 hover:border-gray-300'
+                            }`}
+                          >
+                            <div className={`w-full h-8 ${color.color} rounded mb-2`}></div>
+                            <p className="text-xs text-center text-gray-600">{color.label}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Signatories */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                          <Clock className="h-4 w-4 inline mr-1" />
-                          Duration
+                          <User className="h-4 w-4 inline mr-1" />
+                          Signatory 1 Name
                         </label>
                         <input
                           type="text"
-                          name="duration"
-                          value={formData.duration}
+                          name="signatory1Name"
+                          value={formData.signatory1Name}
                           onChange={handleInputChange}
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          placeholder="e.g., 3 months"
+                          placeholder="e.g., Papry Naznin"
                         />
                       </div>
 
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                          <Clock className="h-4 w-4 inline mr-1" />
-                          Hours
+                          <Award className="h-4 w-4 inline mr-1" />
+                          Signatory 1 Title
                         </label>
                         <input
                           type="text"
-                          name="hours"
-                          value={formData.hours}
+                          name="signatory1Title"
+                          value={formData.signatory1Title}
                           onChange={handleInputChange}
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          placeholder="e.g., 120 hours"
+                          placeholder="e.g., President"
                         />
                       </div>
                     </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        <Award className="h-4 w-4 inline mr-1" />
-                        Specialization
-                      </label>
-                      <input
-                        type="text"
-                        name="specialization"
-                        value={formData.specialization}
-                        onChange={handleInputChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        placeholder="e.g., Frontend Development"
-                      />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          <User className="h-4 w-4 inline mr-1" />
+                          Signatory 2 Name
+                        </label>
+                        <input
+                          type="text"
+                          name="signatory2Name"
+                          value={formData.signatory2Name}
+                          onChange={handleInputChange}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          placeholder="e.g., Die Erlan"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          <Award className="h-4 w-4 inline mr-1" />
+                          Signatory 2 Title
+                        </label>
+                        <input
+                          type="text"
+                          name="signatory2Title"
+                          value={formData.signatory2Title}
+                          onChange={handleInputChange}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          placeholder="e.g., Director"
+                        />
+                      </div>
                     </div>
 
                     <div>
@@ -556,39 +695,12 @@ export default function CreateCertificate() {
                   </div>
                 )}
 
-                {/* Step 3: Template & Finalize */}
+                {/* Step 3: Finalize & Actions */}
                 {currentStep === 3 && (
                   <div className="space-y-6">
                     <div className="text-center mb-6">
-                      <h3 className="text-lg font-semibold text-gray-900">Step 3: Template & Finalize</h3>
-                      <p className="text-sm text-gray-600">Choose template and review certificate</p>
-                    </div>
-
-                    {/* Template Selection */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-4">
-                        <Palette className="h-4 w-4 inline mr-1" />
-                        Choose Template
-                      </label>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {templates.map((template) => (
-                          <div
-                            key={template.id}
-                            onClick={(e) => {
-                              e.preventDefault();
-                              setSelectedTemplate(template.id);
-                            }}
-                            className={`p-4 border-2 rounded-lg cursor-pointer transition-all duration-200 ${
-                              selectedTemplate === template.id
-                                ? 'border-blue-500 bg-blue-50'
-                                : 'border-gray-200 hover:border-gray-300'
-                            }`}
-                          >
-                            <h4 className="font-medium text-gray-900">{template.name}</h4>
-                            <p className="text-sm text-gray-600 mt-1">{template.description}</p>
-                          </div>
-                        ))}
-                      </div>
+                      <h3 className="text-lg font-semibold text-gray-900">Step 3: Finalize & Actions</h3>
+                      <p className="text-sm text-gray-600">Review certificate and choose actions</p>
                     </div>
 
                     {/* Certificate ID */}
@@ -634,10 +746,382 @@ export default function CreateCertificate() {
                           <span className="font-medium">{formData.issuer || 'Not specified'}</span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-gray-600">Template:</span>
-                          <span className="font-medium">{templates.find(t => t.id === selectedTemplate)?.name}</span>
+                          <span className="text-gray-600">Color:</span>
+                          <span className="font-medium capitalize">{formData.certificateColor}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Badge:</span>
+                          <span className="font-medium">{formData.badge || 'None'}</span>
                         </div>
                       </div>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          try {
+                            setIsLoading(true);
+                            // Save draft to localStorage
+                            const draftData = {
+                              ...formData,
+                              savedAt: new Date().toISOString(),
+                              status: 'draft'
+                            };
+                            localStorage.setItem(`certificate_draft_${formData.certificateId}`, JSON.stringify(draftData));
+                            alert('Draft saved successfully!');
+                          } catch (error) {
+                            console.error('Error saving draft:', error);
+                            alert('Error saving draft. Please try again.');
+                          } finally {
+                            setIsLoading(false);
+                          }
+                        }}
+                        disabled={isLoading}
+                        className="flex items-center justify-center gap-2 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors duration-200 disabled:opacity-50"
+                      >
+                        <Save className="h-4 w-4" />
+                        Save Draft
+                      </button>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          try {
+                            setIsLoading(true);
+                            // Simulate NFT minting process
+                            const nftData = {
+                              certificateId: formData.certificateId,
+                              studentName: formData.studentName,
+                              courseName: formData.courseName,
+                              issuer: formData.issuer,
+                              issueDate: formData.issueDate,
+                              metadata: {
+                                description: formData.description,
+                                grade: formData.grade,
+                                badge: formData.badge,
+                                color: formData.certificateColor
+                              }
+                            };
+                            
+                            // Simulate blockchain transaction
+                            await new Promise(resolve => setTimeout(resolve, 2000));
+                            
+                            // Save NFT data to localStorage
+                            const nftTransactions = JSON.parse(localStorage.getItem('nft_transactions') || '[]');
+                            nftTransactions.push({
+                              id: `nft_${Date.now()}`,
+                              type: 'mint',
+                              certificateId: formData.certificateId,
+                              amount: 1,
+                              date: new Date().toISOString(),
+                              status: 'completed',
+                              hash: `0x${Math.random().toString(16).substr(2, 8)}`,
+                              ...nftData
+                            });
+                            localStorage.setItem('nft_transactions', JSON.stringify(nftTransactions));
+                            
+                            alert(`NFT minted successfully!\nTransaction Hash: ${nftTransactions[nftTransactions.length - 1].hash}\nCertificate ID: ${formData.certificateId}`);
+                          } catch (error) {
+                            console.error('Error minting NFT:', error);
+                            alert('Error minting NFT. Please try again.');
+                          } finally {
+                            setIsLoading(false);
+                          }
+                        }}
+                        disabled={isLoading}
+                        className="flex items-center justify-center gap-2 px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors duration-200 disabled:opacity-50"
+                      >
+                        {isLoading ? (
+                          <>
+                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                            Minting...
+                          </>
+                        ) : (
+                          <>
+                            <Award className="h-4 w-4" />
+                            Mint NFT
+                          </>
+                        )}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          try {
+                            setIsLoading(true);
+                            
+                            // Create a new window for PDF generation
+                            const printWindow = window.open('', '_blank');
+                            if (!printWindow) {
+                              alert('Please allow popups to generate PDF');
+                              return;
+                            }
+                            
+                            // Generate HTML content for PDF
+                            const htmlContent = `
+                              <!DOCTYPE html>
+                              <html>
+                                <head>
+                                  <title>Certificate - ${formData.certificateId}</title>
+                                  <style>
+                                    body { 
+                                      margin: 0; 
+                                      padding: 20px; 
+                                      font-family: Arial, sans-serif;
+                                      background: white;
+                                    }
+                                    .certificate {
+                                      width: 800px;
+                                      height: 600px;
+                                      border: 2px solid black;
+                                      position: relative;
+                                      background: white;
+                                    }
+                                    .certificate-band {
+                                      width: 80px;
+                                      height: 100%;
+                                      background: ${formData.certificateColor === 'blue' ? '#2563eb' : 
+                                                   formData.certificateColor === 'green' ? '#16a34a' : 
+                                                   formData.certificateColor === 'purple' ? '#9333ea' : '#eab308'};
+                                      position: absolute;
+                                      left: 0;
+                                      top: 0;
+                                      display: flex;
+                                      align-items: center;
+                                      justify-content: center;
+                                    }
+                                    .certificate-text {
+                                      transform: rotate(-90deg);
+                                      color: white;
+                                      font-weight: bold;
+                                      font-size: 18px;
+                                      letter-spacing: 2px;
+                                    }
+                                    .certificate-content {
+                                      margin-left: 80px;
+                                      padding: 40px;
+                                      height: 100%;
+                                      position: relative;
+                                    }
+                                    .certificate-title {
+                                      text-align: center;
+                                      margin-bottom: 40px;
+                                    }
+                                    .student-name {
+                                      font-size: 36px;
+                                      font-weight: bold;
+                                      color: ${formData.certificateColor === 'blue' ? '#2563eb' : 
+                                              formData.certificateColor === 'green' ? '#16a34a' : 
+                                              formData.certificateColor === 'purple' ? '#9333ea' : '#ea580c'};
+                                      text-align: center;
+                                      margin: 20px 0;
+                                    }
+                                    .course-info {
+                                      text-align: center;
+                                      margin: 20px 0;
+                                    }
+                                    .issuer-info {
+                                      text-align: center;
+                                      font-weight: bold;
+                                      margin: 20px 0;
+                                    }
+                                    .signatures {
+                                      position: absolute;
+                                      bottom: 40px;
+                                      left: 40px;
+                                      right: 40px;
+                                    }
+                                    .signature-row {
+                                      display: flex;
+                                      justify-content: space-between;
+                                    }
+                                    .signature-item {
+                                      text-align: center;
+                                      width: 45%;
+                                    }
+                                    .signature-line {
+                                      border-bottom: 2px solid #333;
+                                      height: 40px;
+                                      margin-bottom: 10px;
+                                    }
+                                    .qr-code {
+                                      position: absolute;
+                                      bottom: 20px;
+                                      left: 20px;
+                                      width: 60px;
+                                      height: 60px;
+                                      border: 1px solid #ccc;
+                                      display: flex;
+                                      align-items: center;
+                                      justify-content: center;
+                                      font-size: 10px;
+                                      color: #666;
+                                    }
+                                    .badge {
+                                      position: absolute;
+                                      top: 20px;
+                                      right: 20px;
+                                      width: 80px;
+                                      height: 80px;
+                                      background: #fbbf24;
+                                      border-radius: 50%;
+                                      display: flex;
+                                      align-items: center;
+                                      justify-content: center;
+                                      font-weight: bold;
+                                      font-size: 12px;
+                                      text-align: center;
+                                    }
+                                    @media print {
+                                      body { margin: 0; }
+                                      .certificate { 
+                                        width: 100%; 
+                                        height: 100vh; 
+                                        border: none;
+                                      }
+                                    }
+                                  </style>
+                                </head>
+                                <body>
+                                  <div class="certificate">
+                                    <div class="certificate-band">
+                                      <div class="certificate-text">CERTIFICATE</div>
+                                    </div>
+                                    <div class="certificate-content">
+                                      ${formData.badge ? `<div class="badge">${formData.badge}</div>` : ''}
+                                      <div class="certificate-title">
+                                        <p>This is certify that</p>
+                                        <div class="student-name">${formData.studentName || 'Student Name'}</div>
+                                        <p>has successfully completed</p>
+                                        <div class="course-info">
+                                          <strong>${formData.courseName || 'Course Name'}</strong>
+                                        </div>
+                                        <div class="issuer-info">
+                                          On Behalf of ${formData.issuer || 'Institution Name'}
+                                        </div>
+                                        <p>${formData.description || 'Certificate of completion'}</p>
+                                        <p><strong>Date: ${formData.issueDate || new Date().toLocaleDateString()}</strong></p>
+                                      </div>
+                                      <div class="signatures">
+                                        <p style="font-weight: bold; margin-bottom: 20px;">VERIFIED BY</p>
+                                        <div class="signature-row">
+                                          <div class="signature-item">
+                                            <div class="signature-line"></div>
+                                            <p><strong>${formData.signatory1Name || 'Papry Naznin'}</strong></p>
+                                            <p>${formData.signatory1Title || 'President'}</p>
+                                          </div>
+                                          <div class="signature-item">
+                                            <div class="signature-line"></div>
+                                            <p><strong>${formData.signatory2Name || 'Die Erlan'}</strong></p>
+                                            <p>${formData.signatory2Title || 'Director'}</p>
+                                          </div>
+                                        </div>
+                                      </div>
+                                      <div class="qr-code">
+                                        QR Code<br/>
+                                        ${formData.certificateId}
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <script>
+                                    window.onload = function() {
+                                      setTimeout(() => {
+                                        window.print();
+                                        window.close();
+                                      }, 1000);
+                                    };
+                                  </script>
+                                </body>
+                              </html>
+                            `;
+                            
+                            printWindow.document.write(htmlContent);
+                            printWindow.document.close();
+                            
+                            alert('PDF generation started! The print dialog will open shortly.');
+                          } catch (error) {
+                            console.error('Error generating PDF:', error);
+                            alert('Error generating PDF. Please try again.');
+                          } finally {
+                            setIsLoading(false);
+                          }
+                        }}
+                        disabled={isLoading}
+                        className="flex items-center justify-center gap-2 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200 disabled:opacity-50"
+                      >
+                        {isLoading ? (
+                          <>
+                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                            Generating...
+                          </>
+                        ) : (
+                          <>
+                            <FileText className="h-4 w-4" />
+                            Download PDF
+                          </>
+                        )}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          try {
+                            setIsLoading(true);
+                            
+                            // Validate required fields
+                            if (!formData.studentEmail) {
+                              alert('Please enter student email address first.');
+                              return;
+                            }
+                            
+                            // Simulate sending email
+                            const emailData = {
+                              to: formData.studentEmail,
+                              subject: `Certificate of Completion - ${formData.courseName}`,
+                              certificateId: formData.certificateId,
+                              studentName: formData.studentName,
+                              courseName: formData.courseName,
+                              issuer: formData.issuer,
+                              issueDate: formData.issueDate,
+                              verificationLink: `${window.location.origin}/verify/${formData.certificateId}`
+                            };
+                            
+                            // Simulate email sending process
+                            await new Promise(resolve => setTimeout(resolve, 1500));
+                            
+                            // Save email record to localStorage
+                            const emailRecords = JSON.parse(localStorage.getItem('email_records') || '[]');
+                            emailRecords.push({
+                              id: `email_${Date.now()}`,
+                              type: 'certificate_sent',
+                              ...emailData,
+                              sentAt: new Date().toISOString(),
+                              status: 'sent'
+                            });
+                            localStorage.setItem('email_records', JSON.stringify(emailRecords));
+                            
+                            alert(`Certificate sent successfully to ${formData.studentEmail}!\n\nStudent will receive:\n- Certificate PDF\n- Verification link\n- Certificate ID: ${formData.certificateId}`);
+                          } catch (error) {
+                            console.error('Error sending certificate:', error);
+                            alert('Error sending certificate. Please try again.');
+                          } finally {
+                            setIsLoading(false);
+                          }
+                        }}
+                        disabled={isLoading || !formData.studentEmail}
+                        className="flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 disabled:opacity-50"
+                      >
+                        {isLoading ? (
+                          <>
+                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                            Sending...
+                          </>
+                        ) : (
+                          <>
+                            <User className="h-4 w-4" />
+                            Send to Student
+                          </>
+                        )}
+                      </button>
                     </div>
                   </div>
                 )}
@@ -676,7 +1160,8 @@ export default function CreateCertificate() {
                       </button>
                     ) : (
                       <button
-                        type="submit"
+                        type="button"
+                        onClick={handleSubmit}
                         disabled={isLoading}
                         className="flex items-center gap-2 px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
@@ -695,7 +1180,7 @@ export default function CreateCertificate() {
                     )}
                   </div>
                 </div>
-              </form>
+              </div>
             </div>
 
             {/* Preview Section */}
