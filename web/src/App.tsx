@@ -24,6 +24,7 @@ const CertificateHistory = lazy(() => import("./pages/CertificateHistory"));
 const VerifyCertificate = lazy(() => import("./pages/VerifyCertificate"));
 const DashboardVerification = lazy(() => import("./pages/DashboardVerification"));
 const StudentCertificates = lazy(() => import("./pages/StudentCertificates"));
+const GiftHistory = lazy(() => import("./pages/GiftHistory"));
 
 export default function App() {
   return (
@@ -265,6 +266,14 @@ export default function App() {
               element={
                 <ProtectedRoute>
                   <CertificateHistory />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/dashboard/gift-history" 
+              element={
+                <ProtectedRoute>
+                  <GiftHistory />
                 </ProtectedRoute>
               } 
             />

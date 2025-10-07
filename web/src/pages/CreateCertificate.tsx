@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
 import { useAuth } from '../contexts/AuthContext';
 import { certificateService } from '../services/firebaseService';
+import { lernisTokenService } from '../services/lernisTokenService';
 import QRCode from 'qrcode';
 import {
   // Bell,
@@ -19,19 +20,16 @@ import {
   // Download,
   Palette,
   // Image,
-  Clock,
   CheckCircle,
   ArrowRight,
   ArrowLeft,
   Hash,
-  Building,
-  GraduationCap
+  Building
 } from 'lucide-react';
 
 export default function CreateCertificate() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
-  const [selectedTemplate, setSelectedTemplate] = useState('classic');
   const [formData, setFormData] = useState({
     studentName: '',
     studentEmail: '',
@@ -58,12 +56,33 @@ export default function CreateCertificate() {
   const [showPreview, setShowPreview] = useState(true);
   const [isSuccess, setIsSuccess] = useState(false);
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string>('');
+  const [tokenBalance, setTokenBalance] = useState<string>('0.00');
+  const [hasEnoughTokens, setHasEnoughTokens] = useState(false);
   
   const { userData, currentUser } = useAuth();
   
   const toggleSidebar = () => {
     setSidebarCollapsed(!sidebarCollapsed);
   };
+
+  // Load token balance and check if user has enough tokens
+  useEffect(() => {
+    const loadTokenBalance = async () => {
+      if (!currentUser) return;
+      
+      try {
+        const balance = await lernisTokenService.getLernisTokenBalance(currentUser.uid);
+        setTokenBalance(balance.balance);
+        
+        const hasEnough = await lernisTokenService.hasEnoughTokensForCertificate(currentUser.uid);
+        setHasEnoughTokens(hasEnough);
+      } catch (error) {
+        console.error('Error loading token balance:', error);
+      }
+    };
+
+    loadTokenBalance();
+  }, [currentUser]);
 
   // Show loading if user is not loaded yet
   if (!currentUser) {
@@ -127,6 +146,12 @@ export default function CreateCertificate() {
       console.log('Current user:', currentUser);
       console.log('User data:', userData);
 
+      // Check if user has enough tokens
+      if (!hasEnoughTokens) {
+        alert(`Insufficient tokens! You need ${lernisTokenService.CERTIFICATE_CREATION_COST} EDU tokens to create a certificate. You currently have ${tokenBalance} EDU tokens.`);
+        return;
+      }
+
       // Create certificate data for Firebase
       const certificateData = {
         name: formData.courseName,
@@ -162,15 +187,44 @@ export default function CreateCertificate() {
       if (certificateId) {
         console.log('Certificate created successfully:', certificateId);
         
-        // Show success state
-        setIsSuccess(true);
+        // Also save to localStorage for verification purposes
+        const localCertificate = {
+          ...certificateData,
+          id: certificateId,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
+        
+        // Store in localStorage for verification
+        const existingCertificates = JSON.parse(localStorage.getItem('certificates') || '[]');
+        existingCertificates.push(localCertificate);
+        localStorage.setItem('certificates', JSON.stringify(existingCertificates));
+        
+        // Deduct tokens for certificate creation
+        const tokenResult = await lernisTokenService.deductTokensForCertificate(
+          currentUser!.uid,
+          certificateId,
+          formData.studentName
+        );
+
+        if (tokenResult.success) {
+          // Update local token balance
+          const newBalance = (parseFloat(tokenBalance) - lernisTokenService.CERTIFICATE_CREATION_COST).toFixed(2);
+          setTokenBalance(newBalance);
+          setHasEnoughTokens(parseFloat(newBalance) >= lernisTokenService.CERTIFICATE_CREATION_COST);
+          
+          // Show success state
+          setIsSuccess(true);
+        } else {
+          throw new Error(tokenResult.error || 'Failed to process token deduction');
+        }
       } else {
         throw new Error('Failed to create certificate');
       }
       
     } catch (error) {
       console.error('Error creating certificate:', error);
-      alert('Error creating certificate. Please try again.');
+      alert(`Error creating certificate: ${error instanceof Error ? error.message : 'Please try again.'}`);
     } finally {
       setIsLoading(false);
     }
@@ -221,6 +275,14 @@ export default function CreateCertificate() {
       badge: '',
       certificateColor: 'yellow'
     });
+    
+    // Reload token balance to reflect the updated balance
+    if (currentUser) {
+      lernisTokenService.getLernisTokenBalance(currentUser.uid).then(balance => {
+        setTokenBalance(balance.balance);
+        setHasEnoughTokens(parseFloat(balance.balance) >= lernisTokenService.CERTIFICATE_CREATION_COST);
+      });
+    }
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -231,13 +293,6 @@ export default function CreateCertificate() {
     }));
   };
 
-  // Template options
-  const templates = [
-    { id: 'classic', name: 'Classic', description: 'Traditional design with elegant borders' },
-    { id: 'modern', name: 'Modern', description: 'Clean and minimalist design' },
-    { id: 'minimal', name: 'Minimal', description: 'Simple and focused layout' },
-    { id: 'gold', name: 'Gold Border', description: 'Premium design with gold accents' }
-  ];
 
   // Certificate Preview Component
   const CertificatePreview = () => {
@@ -417,6 +472,58 @@ export default function CreateCertificate() {
 
         {/* Main Content */}
         <main className="flex-1 overflow-y-auto p-6">
+          {/* Token Cost Information */}
+          <div className="max-w-7xl mx-auto mb-6">
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200 p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-4">
+                  <div className="flex items-center space-x-2">
+                    <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                      <Award className="h-4 w-4 text-blue-600" />
+                    </div>
+                    <div>
+                      <h3 className="font-medium text-gray-900">Certificate Creation Cost</h3>
+                      <p className="text-sm text-gray-600">Token required to create a certificate</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-6">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-blue-600">{lernisTokenService.CERTIFICATE_CREATION_COST} EDU</div>
+                    <div className="text-sm text-gray-600">Required</div>
+                  </div>
+                  <div className="text-center">
+                    <div className={`text-2xl font-bold ${hasEnoughTokens ? 'text-green-600' : 'text-red-600'}`}>
+                      {tokenBalance} EDU
+                    </div>
+                    <div className="text-sm text-gray-600">Your Balance</div>
+                  </div>
+                  <div className="flex items-center">
+                    {hasEnoughTokens ? (
+                      <div className="flex items-center space-x-2 text-green-600">
+                        <CheckCircle className="h-5 w-5" />
+                        <span className="font-medium">Sufficient Balance</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center space-x-2 text-red-600">
+                        <X className="h-5 w-5" />
+                        <span className="font-medium">Insufficient Balance</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+              {!hasEnoughTokens && (
+                <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <p className="text-sm text-red-700">
+                    You need {lernisTokenService.CERTIFICATE_CREATION_COST - parseFloat(tokenBalance)} more EDU tokens to create a certificate. 
+                    <a href="/dashboard/buy-tokens" className="font-medium underline ml-1">Buy tokens here</a>
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+
           {isSuccess ? (
             /* Success State */
             <div className="max-w-2xl mx-auto">
@@ -429,6 +536,17 @@ export default function CreateCertificate() {
                   Your certificate has been created and minted on the blockchain. 
                   The student will receive it in their wallet.
                 </p>
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                  <div className="flex items-center justify-center space-x-2 text-blue-700">
+                    <Award className="h-5 w-5" />
+                    <span className="font-medium">
+                      {lernisTokenService.CERTIFICATE_CREATION_COST} EDU tokens deducted from your balance
+                    </span>
+                  </div>
+                  <p className="text-sm text-blue-600 mt-1 text-center">
+                    Remaining balance: {tokenBalance} EDU tokens
+                  </p>
+                </div>
                 <div className="bg-gray-50 rounded-lg p-4 mb-6">
                   <h3 className="font-medium text-gray-900 mb-2">Certificate Details</h3>
                   <div className="text-sm text-gray-600 space-y-1">
@@ -839,7 +957,6 @@ export default function CreateCertificate() {
                             nftTransactions.push({
                               id: `nft_${Date.now()}`,
                               type: 'mint',
-                              certificateId: formData.certificateId,
                               amount: 1,
                               date: new Date().toISOString(),
                               status: 'completed',
@@ -1347,13 +1464,22 @@ export default function CreateCertificate() {
                       <button
                         type="button"
                         onClick={handleSubmit}
-                        disabled={isLoading}
-                        className="flex items-center gap-2 px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                        disabled={isLoading || !hasEnoughTokens}
+                        className={`flex items-center gap-2 px-6 py-2 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${
+                          hasEnoughTokens 
+                            ? 'bg-green-600 text-white hover:bg-green-700' 
+                            : 'bg-gray-400 text-white cursor-not-allowed'
+                        }`}
                       >
                         {isLoading ? (
                           <>
                             <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                             Creating...
+                          </>
+                        ) : !hasEnoughTokens ? (
+                          <>
+                            <X className="h-4 w-4" />
+                            Insufficient Tokens
                           </>
                         ) : (
                           <>

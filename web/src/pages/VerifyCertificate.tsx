@@ -68,7 +68,10 @@ export default function VerifyCertificate() {
         if (!foundCertificate) {
           const emailRecords = JSON.parse(localStorage.getItem('email_records') || '[]');
           foundCertificate = emailRecords.find((record: any) => 
-            record.certificateId === certificateId || record.id === certificateId
+            record.certificateId === certificateId || 
+            record.id === certificateId ||
+            record.emailId === certificateId ||
+            `email_${record.timestamp}` === certificateId
           );
         }
 
@@ -85,9 +88,25 @@ export default function VerifyCertificate() {
         }
 
         if (foundCertificate) {
-          setCertificate(foundCertificate);
+          console.log('Found certificate:', foundCertificate);
+          
+          // Normalize certificate data structure
+          const normalizedCertificate = {
+            ...foundCertificate,
+            // Ensure we have the right field names
+            studentName: foundCertificate.studentName || (foundCertificate as any).studentName,
+            courseName: foundCertificate.courseName || (foundCertificate as any).courseName || foundCertificate.name,
+            certificateId: foundCertificate.certificateId || (foundCertificate as any).certificateId || foundCertificate.id,
+            date: foundCertificate.date || (foundCertificate as any).issueDate || (foundCertificate as any).date,
+            issuer: foundCertificate.issuer || (foundCertificate as any).issuer,
+            name: foundCertificate.name || (foundCertificate as any).courseName || (foundCertificate as any).name
+          };
+          
+          console.log('Normalized certificate:', normalizedCertificate);
+          setCertificate(normalizedCertificate);
           setVerificationStatus('valid');
         } else {
+          console.log('Certificate not found for ID:', certificateId);
           setVerificationStatus('invalid');
           setError('Certificate not found or invalid');
         }
@@ -565,7 +584,9 @@ export default function VerifyCertificate() {
                   </div>
                   <div>
                     <p className="text-sm text-gray-600">Course Name</p>
-                    <p className="font-semibold text-gray-900">{certificate.name}</p>
+                    <p className="font-semibold text-gray-900">
+                      {(certificate as any).courseName || certificate.name || 'Not specified'}
+                    </p>
                   </div>
                 </div>
 
@@ -588,7 +609,7 @@ export default function VerifyCertificate() {
                   <div>
                     <p className="text-sm text-gray-600">Issue Date</p>
                     <p className="font-semibold text-gray-900">
-                      {new Date(certificate.date).toLocaleDateString()}
+                      {certificate.date ? new Date(certificate.date).toLocaleDateString() : 'Not specified'}
                     </p>
                   </div>
                 </div>
@@ -599,7 +620,9 @@ export default function VerifyCertificate() {
                   </div>
                   <div>
                     <p className="text-sm text-gray-600">Certificate ID</p>
-                    <p className="font-semibold text-gray-900 font-mono">{certificate.id}</p>
+                    <p className="font-semibold text-gray-900 font-mono">
+                      {(certificate as any).certificateId || certificate.id || 'Not specified'}
+                    </p>
                   </div>
                 </div>
 
@@ -609,8 +632,12 @@ export default function VerifyCertificate() {
                   </div>
                   <div>
                     <p className="text-sm text-gray-600">Status</p>
-                    <p className="font-semibold text-green-600">
-                      {certificate.verified ? 'Verified' : 'Pending Verification'}
+                    <p className={`font-semibold ${
+                      verificationStatus === 'valid' ? 'text-green-600' : 
+                      verificationStatus === 'invalid' ? 'text-red-600' : 'text-yellow-600'
+                    }`}>
+                      {verificationStatus === 'valid' ? 'Verified' : 
+                       verificationStatus === 'invalid' ? 'Invalid' : 'Pending Verification'}
                     </p>
                   </div>
                 </div>

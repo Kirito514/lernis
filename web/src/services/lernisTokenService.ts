@@ -10,7 +10,7 @@ export interface LernisTokenBalance {
 
 export interface LernisTokenTransaction {
   id: string;
-  type: 'mint' | 'burn' | 'transfer' | 'purchase' | 'reward';
+  type: 'mint' | 'burn' | 'transfer' | 'purchase' | 'reward' | 'gift' | 'certificate_creation';
   amount: string;
   symbol: string;
   from?: string;
@@ -39,10 +39,28 @@ export interface PaymentMethod {
 }
 
 export const lernisTokenService = {
+  // Certificate creation cost configuration
+  CERTIFICATE_CREATION_COST: 10, // 10 EDU tokens per certificate
+
   // Token balance management
   async getLernisTokenBalance(userId: string): Promise<LernisTokenBalance> {
     try {
-      // localStorage'dan balansni olish
+      // Firebase'dan balansni olish
+      const { tokenBalanceService } = await import('./firebaseService');
+      const firebaseBalance = await tokenBalanceService.getTokenBalance(userId);
+      
+      if (firebaseBalance) {
+        return {
+          symbol: firebaseBalance.symbol || 'EDU',
+          name: firebaseBalance.name || 'EduCoin Platform Token',
+          balance: firebaseBalance.balance,
+          usdValue: firebaseBalance.usdValue,
+          icon: firebaseBalance.icon || '🎓',
+          decimals: firebaseBalance.decimals || 2
+        };
+      }
+      
+      // Fallback to localStorage if Firebase fails
       const storedBalance = localStorage.getItem(`edu_token_balance_${userId}`);
       if (storedBalance) {
         const balance = JSON.parse(storedBalance);
@@ -56,7 +74,7 @@ export const lernisTokenService = {
         };
       }
       
-      // Agar balans yo'q bo'lsa, default balans qo'yish
+      // Default balance
       const defaultBalance = {
         symbol: 'EDU',
         name: 'EduCoin Platform Token',
@@ -65,12 +83,6 @@ export const lernisTokenService = {
         icon: '🎓',
         decimals: 2
       };
-      
-      // localStorage'ga saqlash
-      localStorage.setItem(`edu_token_balance_${userId}`, JSON.stringify({
-        balance: defaultBalance.balance,
-        usdValue: defaultBalance.usdValue
-      }));
       
       return defaultBalance;
     } catch (error) {
@@ -89,12 +101,25 @@ export const lernisTokenService = {
   // Token balansini yangilash
   async updateTokenBalance(userId: string, newBalance: string, newUsdValue: string): Promise<void> {
     try {
+      // Avtomatik Firebase sync
+      const { autoFirebaseService } = await import('./autoFirebaseService');
+      await autoFirebaseService.syncOnChange(userId, 'token', {
+        balance: newBalance,
+        usdValue: newUsdValue
+      });
+      
+      // localStorage'ga ham saqlash (fallback uchun)
       localStorage.setItem(`edu_token_balance_${userId}`, JSON.stringify({
         balance: newBalance,
         usdValue: newUsdValue
       }));
     } catch (error) {
       console.error('Error updating token balance:', error);
+      // Fallback to localStorage
+      localStorage.setItem(`edu_token_balance_${userId}`, JSON.stringify({
+        balance: newBalance,
+        usdValue: newUsdValue
+      }));
     }
   },
 
@@ -243,6 +268,61 @@ export const lernisTokenService = {
     const usdAmount = lernisAmount * lernisPrice;
     // USD to UZS conversion (1 USD = 12500 UZS)
     return usdAmount * 12500;
+  },
+
+  // Check if user has enough tokens for certificate creation
+  async hasEnoughTokensForCertificate(userId: string): Promise<boolean> {
+    try {
+      const balance = await this.getLernisTokenBalance(userId);
+      return parseFloat(balance.balance) >= this.CERTIFICATE_CREATION_COST;
+    } catch (error) {
+      console.error('Error checking token balance:', error);
+      return false;
+    }
+  },
+
+  // Deduct tokens for certificate creation
+  async deductTokensForCertificate(userId: string, certificateId: string, studentName: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      const currentBalance = await this.getLernisTokenBalance(userId);
+      const currentBalanceNum = parseFloat(currentBalance.balance);
+      
+      if (currentBalanceNum < this.CERTIFICATE_CREATION_COST) {
+        return {
+          success: false,
+          error: `Insufficient tokens. You need ${this.CERTIFICATE_CREATION_COST} EDU tokens but only have ${currentBalanceNum} EDU tokens.`
+        };
+      }
+
+      // Calculate new balance
+      const newBalance = (currentBalanceNum - this.CERTIFICATE_CREATION_COST).toFixed(2);
+      const tokenPrice = await this.getLernisTokenPrice();
+      const newUsdValue = (parseFloat(newBalance) * tokenPrice.price).toFixed(2);
+
+      // Update balance
+      await this.updateTokenBalance(userId, newBalance, newUsdValue);
+
+      // Add transaction record
+      const transaction: LernisTokenTransaction = {
+        id: `cert_${Date.now()}`,
+        type: 'certificate_creation',
+        amount: `-${this.CERTIFICATE_CREATION_COST}`,
+        symbol: 'EDU',
+        timestamp: new Date().toISOString(),
+        status: 'confirmed',
+        description: `Certificate created for ${studentName} (ID: ${certificateId})`
+      };
+
+      await this.addTransaction(userId, transaction);
+
+      return { success: true };
+    } catch (error) {
+      console.error('Error deducting tokens for certificate:', error);
+      return {
+        success: false,
+        error: 'Failed to process token deduction. Please try again.'
+      };
+    }
   },
 
   // Check if user has enough LERNIS for NFT minting

@@ -64,6 +64,7 @@ interface AuthContextType {
   loginWithGoogle: () => Promise<void>;
   logout: () => Promise<void>;
   loading: boolean;
+  getAllUsers: () => Promise<UserData[]>;
 }
 
 const AuthContext = createContext<AuthContextType>({} as AuthContextType);
@@ -225,6 +226,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  // Barcha user'larni olish
+  const getAllUsers = async (): Promise<UserData[]> => {
+    try {
+      const { collection, getDocs } = await import('firebase/firestore');
+      const usersCollection = collection(db, 'users');
+      const usersSnapshot = await getDocs(usersCollection);
+      const users = usersSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as UserData[];
+      
+      return users;
+    } catch (error) {
+      console.error('Error getting all users:', error);
+      return [];
+    }
+  };
+
   // Auth holatini kuzatish (optimized)
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -232,6 +251,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (user) {
         // Non-blocking user data fetch
         fetchUserData(user).catch(console.error);
+        
+        // Avtomatik Firebase sync
+        try {
+          const { autoFirebaseService } = await import('../services/autoFirebaseService');
+          await autoFirebaseService.autoSyncOnLogin(user.uid);
+          console.log('Auto-sync completed for user:', user.uid);
+        } catch (error) {
+          console.error('Auto-sync failed:', error);
+        }
       } else {
         setUserData(null);
       }
@@ -248,7 +276,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     login,
     loginWithGoogle,
     logout,
-    loading
+    loading,
+    getAllUsers
   };
 
   return (

@@ -4,7 +4,8 @@ import Sidebar from '../components/Sidebar';
 import { useAuth } from '../contexts/AuthContext';
 import MarketplaceBanner from '../components/MarketplaceBanner';
 import { lernisTokenService, type LernisTokenBalance, type LernisTokenTransaction } from '../services/lernisTokenService';
-import { type NFTTransaction } from '../services/nftMarketplaceService';
+import { nftMarketplaceService, type NFTTransaction, type NFT } from '../services/nftMarketplaceService';
+import { userSearchService, type User } from '../services/userSearchService';
 import { 
   certificateService, 
   achievementService, 
@@ -44,7 +45,10 @@ import {
   // Minus,
   DollarSign,
   ArrowDownCircle,
-  X
+  X,
+  Search,
+  Loader2,
+  User as UserIcon
 } from 'lucide-react';
 
 export default function WalletPage() {
@@ -59,6 +63,7 @@ export default function WalletPage() {
   const [eduTokenBalance, setEduTokenBalance] = useState<LernisTokenBalance | null>(null);
   const [eduTokenTransactions, setEduTokenTransactions] = useState<LernisTokenTransaction[]>([]);
   const [nftTransactions, setNftTransactions] = useState<NFTTransaction[]>([]);
+  const [ownedNFTs, setOwnedNFTs] = useState<NFT[]>([]);
   const [walletTransactions, setWalletTransactions] = useState<WalletTransaction[]>([]);
   // const [tokenBalances, setTokenBalances] = useState<TokenBalance[]>([]);
   // const [tokenTransactions, setTokenTransactions] = useState<TokenTransaction[]>([]);
@@ -96,10 +101,110 @@ export default function WalletPage() {
   const [isCreatingToken, setIsCreatingToken] = useState(false);
   const [isTransferringToken, setIsTransferringToken] = useState(false);
   
-  const { currentUser, userData } = useAuth();
+  // NFT Send states
+  const [showSendNFTModal, setShowSendNFTModal] = useState(false);
+  const [selectedNFTForSend, setSelectedNFTForSend] = useState<NFT | null>(null);
+  const [recipientSearch, setRecipientSearch] = useState('');
+  const [searchResults, setSearchResults] = useState<User[]>([]);
+  const [selectedRecipient, setSelectedRecipient] = useState<User | null>(null);
+  const [giftMessage, setGiftMessage] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
+  const [isSending, setIsSending] = useState(false);
+  
+  const { currentUser, userData, getAllUsers } = useAuth();
 
   const toggleSidebar = () => {
     setSidebarCollapsed(!sidebarCollapsed);
+  };
+
+
+  // NFT Send functions
+  const handleSearchRecipients = async (query: string) => {
+    if (!query.trim()) {
+      setSearchResults([]);
+      return;
+    }
+
+    setIsSearching(true);
+    try {
+      // First try to get real users from Firebase
+      const realUsers = await getAllUsers();
+      const searchQuery = query.toLowerCase();
+      
+      // Filter real users
+      const filteredRealUsers = realUsers
+        .filter(user => 
+          user.uid.toLowerCase().includes(searchQuery) ||
+          user.email.toLowerCase().includes(searchQuery) ||
+          user.displayName.toLowerCase().includes(searchQuery) ||
+          (user.nickname && user.nickname.toLowerCase().includes(searchQuery))
+        )
+        .slice(0, 5)
+        .map(user => ({
+          id: user.uid,
+          username: user.nickname || user.displayName?.toLowerCase().replace(/\s+/g, '_') || `user_${user.uid}`,
+          email: user.email,
+          displayName: user.displayName,
+          avatar: '/api/placeholder/40/40',
+          isActive: true,
+          joinedAt: user.createdAt || new Date().toISOString()
+        }));
+
+      if (filteredRealUsers.length > 0) {
+        setSearchResults(filteredRealUsers);
+      } else {
+        // Fall back to demo users
+        const result = await userSearchService.searchUsers(query, 5);
+        setSearchResults(result.users);
+      }
+    } catch (error) {
+      console.error('Error searching users:', error);
+      // Fall back to demo users
+      try {
+        const result = await userSearchService.searchUsers(query, 5);
+        setSearchResults(result.users);
+      } catch (fallbackError) {
+        console.error('Fallback search also failed:', fallbackError);
+        setSearchResults([]);
+      }
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const handleSendNFT = async () => {
+    if (!currentUser || !selectedNFTForSend || !selectedRecipient) return;
+
+    setIsSending(true);
+    try {
+      const result = await nftMarketplaceService.giftNFT(
+        currentUser.uid,
+        selectedNFTForSend.id,
+        selectedRecipient.id,
+        giftMessage
+      );
+
+      if (result.success) {
+        alert(`NFT "${selectedNFTForSend.name}" sent to ${selectedRecipient.displayName} successfully!`);
+        // Refresh owned NFTs
+        const userNFTs = await nftMarketplaceService.getUserNFTs(currentUser.uid);
+        setOwnedNFTs(userNFTs);
+        // Reset modal
+        setShowSendNFTModal(false);
+        setSelectedNFTForSend(null);
+        setSelectedRecipient(null);
+        setRecipientSearch('');
+        setGiftMessage('');
+        setSearchResults([]);
+      } else {
+        alert(result.error || 'Send failed');
+      }
+    } catch (error) {
+      console.error('Send error:', error);
+      alert('Send failed');
+    } finally {
+      setIsSending(false);
+    }
   };
 
   // Firebase'dan ma'lumotlarni yuklash
@@ -118,11 +223,16 @@ export default function WalletPage() {
         setEduTokenBalance(eduBalance);
         setEduTokenTransactions(eduTransactions);
         
+        
         // NFT transaction'larini yuklash
         const storedNftTransactions = localStorage.getItem(`nft_transactions_${currentUser.uid}`);
         if (storedNftTransactions) {
           setNftTransactions(JSON.parse(storedNftTransactions));
         }
+        
+        // Owned NFTs'ni yuklash
+        const userNFTs = await nftMarketplaceService.getUserNFTs(currentUser.uid);
+        setOwnedNFTs(userNFTs);
         
         // Agar wallet mavjud bo'lsa, boshqa ma'lumotlarni ham yuklash
         if (userData?.wallet) {
@@ -691,9 +801,9 @@ export default function WalletPage() {
                           <Trophy className="h-5 w-5 text-green-600" />
                     </div>
                     <span className="text-xs text-gray-500">NFTs</span>
-                    </div>
-                  <h3 className="text-sm font-medium text-gray-600 mb-1">Certificates</h3>
-                  <p className="text-lg font-bold text-gray-900">{certificates.length}</p>
+                  </div>
+                <h3 className="text-sm font-medium text-gray-600 mb-1">NFTs</h3>
+                <p className="text-lg font-bold text-gray-900">{ownedNFTs.length}</p>
                   </div>
                 
                 <div className="bg-white rounded-xl p-4 border border-gray-200 hover:shadow-md transition-all duration-200">
@@ -715,6 +825,7 @@ export default function WalletPage() {
                     {[
                       { id: 'overview', name: 'Overview', icon: BarChart3 },
                       { id: 'tokens', name: 'Tokens', icon: Coins },
+                      { id: 'nfts', name: 'NFTs', icon: Trophy },
                       { id: 'certificates', name: 'Certificates', icon: FileText },
                       { id: 'achievements', name: 'Achievements', icon: Trophy },
                       { id: 'transactions', name: 'Transactions', icon: Activity }
@@ -742,6 +853,7 @@ export default function WalletPage() {
                   {/* Overview Tab */}
                   {selectedTab === 'overview' && (
                     <div className="space-y-6">
+
                       {/* EDU Token Balance Card */}
                       <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl p-6 border border-blue-200">
                         <div className="flex items-center justify-between">
@@ -906,6 +1018,126 @@ export default function WalletPage() {
                           </div>
                         </div>
                       </div>
+                    </div>
+                  )}
+
+                  {/* NFTs Tab */}
+                  {selectedTab === 'nfts' && (
+                    <div className="space-y-6">
+                      {/* NFTs Header */}
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h3 className="text-2xl font-bold text-gray-900">My NFTs</h3>
+                          <p className="text-gray-600">Your purchased and received NFT collection</p>
+                        </div>
+                        <Link
+                          to="/dashboard/marketplace"
+                          className="inline-flex items-center space-x-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors duration-200"
+                        >
+                          <span className="text-lg">🎨</span>
+                          <span>Browse Marketplace</span>
+                        </Link>
+                      </div>
+
+                      {/* NFTs Grid */}
+                      {ownedNFTs.length > 0 ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                          {ownedNFTs.map((nft) => (
+                            <div
+                              key={nft.id}
+                              className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow duration-200"
+                            >
+                              {/* NFT Image */}
+                              <div className="aspect-square bg-gradient-to-br from-purple-50 to-blue-50 p-4">
+                                <div className="w-full h-full bg-white rounded-lg flex items-center justify-center text-6xl">
+                                  {nft.category === 'certificate' ? '🎓' : 
+                                   nft.category === 'achievement' ? '🏆' : 
+                                   nft.category === 'badge' ? '🎖️' : 
+                                   nft.category === 'course' ? '📚' : 
+                                   nft.category === 'collectible' ? '🎨' : '💎'}
+                                </div>
+                              </div>
+
+                              {/* NFT Info */}
+                              <div className="p-4">
+                                <div className="flex items-start justify-between mb-2">
+                                  <h4 className="font-semibold text-gray-900 truncate text-sm">{nft.name}</h4>
+                                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                    nft.rarity === 'common' ? 'text-gray-500 bg-gray-100' :
+                                    nft.rarity === 'rare' ? 'text-blue-500 bg-blue-100' :
+                                    nft.rarity === 'epic' ? 'text-purple-500 bg-purple-100' :
+                                    nft.rarity === 'legendary' ? 'text-yellow-500 bg-yellow-100' :
+                                    'text-gray-500 bg-gray-100'
+                                  }`}>
+                                    {nft.rarity}
+                                  </span>
+                                </div>
+                                
+                                <p className="text-xs text-gray-600 mb-3 line-clamp-2">{nft.description}</p>
+                                
+                                <div className="flex items-center justify-between text-xs text-gray-500 mb-3">
+                                  <span>By {nft.creator.name}</span>
+                                  <span>{new Date(nft.mintedAt).toLocaleDateString()}</span>
+                                </div>
+                                
+                                {/* Show if NFT was received as gift */}
+                                {(nft as any).receivedFrom && (
+                                  <div className="mb-3 p-2 bg-green-50 border border-green-200 rounded-lg">
+                                    <div className="flex items-center space-x-2">
+                                      <span className="text-green-600">🎁</span>
+                                      <span className="text-xs text-green-700">
+                                        Received from {(nft as any).receivedFrom}
+                                      </span>
+                                    </div>
+                                    {(nft as any).giftMessage && (
+                                      <p className="text-xs text-green-600 mt-1 italic">
+                                        "{(nft as any).giftMessage}"
+                                      </p>
+                                    )}
+                                  </div>
+                                )}
+                                
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center space-x-1">
+                                    <Coins className="h-3 w-3 text-blue-600" />
+                                    <span className="text-xs font-semibold text-gray-900">{nft.price} EDU</span>
+                                  </div>
+                                  <div className="flex items-center space-x-1">
+                                    <button className="p-1 text-gray-400 hover:text-blue-500">
+                                      <Eye className="h-3 w-3" />
+                                    </button>
+                                    <button 
+                                      onClick={() => {
+                                        setSelectedNFTForSend(nft);
+                                        setShowSendNFTModal(true);
+                                      }}
+                                      className="p-1 text-gray-400 hover:text-green-500"
+                                      title="Send NFT"
+                                    >
+                                      <Send className="h-3 w-3" />
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-center py-12">
+                          <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <span className="text-4xl">🎨</span>
+                          </div>
+                          <h3 className="text-lg font-medium text-gray-900 mb-2">No NFTs Yet</h3>
+                          <p className="text-gray-500 mb-6">Start collecting educational NFTs from the marketplace!</p>
+                          <Link
+                            to="/dashboard/marketplace"
+                            className="inline-flex items-center space-x-2 bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition-colors duration-200"
+                          >
+                            <span className="text-lg">🎨</span>
+                            <span>Browse Marketplace</span>
+                          </Link>
+                        </div>
+                      )}
                     </div>
                   )}
 
@@ -2028,6 +2260,171 @@ export default function WalletPage() {
                     <span>Copy Address</span>
                   )}
                 </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Send NFT Modal */}
+      {showSendNFTModal && selectedNFTForSend && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md border border-gray-200">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">Send NFT</h3>
+                <button
+                  onClick={() => {
+                    setShowSendNFTModal(false);
+                    setSelectedNFTForSend(null);
+                    setSelectedRecipient(null);
+                    setRecipientSearch('');
+                    setGiftMessage('');
+                    setSearchResults([]);
+                  }}
+                  className="p-2 hover:bg-gray-100 rounded-lg"
+                >
+                  <X className="h-5 w-5 text-gray-500" />
+                </button>
+              </div>
+              
+              {/* NFT Info */}
+              <div className="text-center mb-6">
+                <div className="w-24 h-24 bg-gradient-to-br from-green-50 to-blue-50 rounded-xl flex items-center justify-center mx-auto mb-3">
+                  <span className="text-3xl">
+                    {selectedNFTForSend.category === 'certificate' ? '🎓' : 
+                     selectedNFTForSend.category === 'achievement' ? '🏆' : 
+                     selectedNFTForSend.category === 'badge' ? '🎖️' : 
+                     selectedNFTForSend.category === 'course' ? '📚' : 
+                     selectedNFTForSend.category === 'collectible' ? '🎨' : '💎'}
+                  </span>
+                </div>
+                <h4 className="font-semibold text-gray-900 mb-1">{selectedNFTForSend.name}</h4>
+                <div className="flex items-center justify-center space-x-2 mb-4">
+                  <Coins className="h-4 w-4 text-blue-600" />
+                  <span className="font-bold text-gray-900">{selectedNFTForSend.price} EDU</span>
+                </div>
+              </div>
+
+              {/* Recipient Search */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Send to (ID, Username, or Email)
+                </label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Search by ID, username, or email..."
+                    value={recipientSearch}
+                    onChange={(e) => {
+                      setRecipientSearch(e.target.value);
+                      handleSearchRecipients(e.target.value);
+                    }}
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  />
+                  {isSearching && (
+                    <Loader2 className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 animate-spin" />
+                  )}
+                </div>
+
+                {/* Search Results */}
+                {searchResults.length > 0 && (
+                  <div className="mt-2 border border-gray-200 rounded-lg bg-white shadow-lg max-h-48 overflow-y-auto">
+                    {searchResults.map((user) => (
+                      <button
+                        key={user.id}
+                        onClick={() => {
+                          setSelectedRecipient(user);
+                          setRecipientSearch(user.displayName);
+                          setSearchResults([]);
+                        }}
+                        className="w-full p-3 text-left hover:bg-gray-50 border-b border-gray-100 last:border-b-0 flex items-center space-x-3"
+                      >
+                        <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                          <UserIcon className="h-4 w-4 text-blue-600" />
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-2">
+                            <p className="font-medium text-gray-900">{user.displayName}</p>
+                            <span className="px-1.5 py-0.5 bg-green-100 text-green-700 text-xs rounded-full">
+                              Real User
+                            </span>
+                          </div>
+                          <p className="text-sm text-gray-500">@{user.username}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xs text-gray-400">{user.email}</p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Selected Recipient */}
+              {selectedRecipient && (
+                <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                      <UserIcon className="h-5 w-5 text-green-600" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-medium text-gray-900">{selectedRecipient.displayName}</p>
+                      <p className="text-sm text-gray-500">@{selectedRecipient.username}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs text-gray-400">{selectedRecipient.email}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Gift Message */}
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Message (Optional)
+                </label>
+                <textarea
+                  placeholder="Add a personal message..."
+                  value={giftMessage}
+                  onChange={(e) => setGiftMessage(e.target.value)}
+                  rows={3}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 resize-none"
+                />
+              </div>
+              
+              <div className="flex space-x-3">
+                <button
+                  onClick={() => {
+                    setShowSendNFTModal(false);
+                    setSelectedNFTForSend(null);
+                    setSelectedRecipient(null);
+                    setRecipientSearch('');
+                    setGiftMessage('');
+                    setSearchResults([]);
+                  }}
+                  className="flex-1 px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSendNFT}
+                  disabled={!selectedRecipient || isSending}
+                  className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+                >
+                  {isSending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span>Sending...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Send className="h-4 w-4" />
+                      <span>Send NFT</span>
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         </div>

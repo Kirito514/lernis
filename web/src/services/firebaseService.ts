@@ -5,6 +5,7 @@ import {
   getDoc, 
   addDoc, 
   updateDoc, 
+  setDoc,
   // deleteDoc, 
   query, 
   where, 
@@ -204,6 +205,7 @@ export const certificateService = {
       return result;
     } catch (error) {
       console.error('Error getting certificates:', error);
+      // Return empty array instead of throwing error
       return [];
     }
   },
@@ -346,6 +348,268 @@ export const transactionService = {
   }
 };
 
+// Token Balance Service
+export const tokenBalanceService = {
+  // Token balansini olish
+  async getTokenBalance(userId: string): Promise<any> {
+    try {
+      const docRef = doc(db, 'tokenBalances', userId);
+      const docSnap = await getDoc(docRef);
+      
+      if (docSnap.exists()) {
+        return docSnap.data();
+      } else {
+        // Default balance yaratish
+        const defaultBalance = {
+          userId,
+          balance: '100.00',
+          usdValue: '5.00',
+          symbol: 'EDU',
+          name: 'EduCoin Platform Token',
+          icon: '🎓',
+          decimals: 2,
+          createdAt: Timestamp.now(),
+          updatedAt: Timestamp.now()
+        };
+        
+        await setDoc(docRef, defaultBalance);
+        return defaultBalance;
+      }
+    } catch (error) {
+      console.error('Error getting token balance:', error);
+      return null;
+    }
+  },
+
+  // Token balansini yangilash
+  async updateTokenBalance(userId: string, balance: string, usdValue: string): Promise<boolean> {
+    try {
+      const docRef = doc(db, 'tokenBalances', userId);
+      await setDoc(docRef, {
+        balance,
+        usdValue,
+        updatedAt: Timestamp.now()
+      }, { merge: true });
+      return true;
+    } catch (error) {
+      console.error('Error updating token balance:', error);
+      return false;
+    }
+  }
+};
+
+// NFT Ownership Service
+export const nftOwnershipService = {
+  // User'ning owned NFT'larini olish
+  async getUserNFTs(userId: string): Promise<any[]> {
+    try {
+      const q = query(
+        collection(db, 'nftOwnership'),
+        where('ownerId', '==', userId),
+        orderBy('acquiredAt', 'desc')
+      );
+      const querySnapshot = await getDocs(q);
+      return querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+    } catch (error) {
+      console.error('Error getting user NFTs:', error);
+      return [];
+    }
+  },
+
+  // NFT ownership qo'shish
+  async addNFTOwnership(nftData: any): Promise<string | null> {
+    try {
+      const docRef = await addDoc(collection(db, 'nftOwnership'), {
+        ...nftData,
+        acquiredAt: Timestamp.now(),
+        createdAt: Timestamp.now(),
+        updatedAt: Timestamp.now()
+      });
+      return docRef.id;
+    } catch (error) {
+      console.error('Error adding NFT ownership:', error);
+      return null;
+    }
+  },
+
+  // NFT ownership o'chirish
+  async removeNFTOwnership(userId: string, nftId: string): Promise<boolean> {
+    try {
+      const q = query(
+        collection(db, 'nftOwnership'),
+        where('ownerId', '==', userId),
+        where('nftId', '==', nftId)
+      );
+      const querySnapshot = await getDocs(q);
+      
+      const deletePromises = querySnapshot.docs.map(doc => doc.ref.delete());
+      await Promise.all(deletePromises);
+      
+      return true;
+    } catch (error) {
+      console.error('Error removing NFT ownership:', error);
+      return false;
+    }
+  }
+};
+
+// NFT Transaction Service
+export const nftTransactionService = {
+  // NFT transaction'larini olish
+  async getNFTTransactions(userId: string): Promise<any[]> {
+    try {
+      const q = query(
+        collection(db, 'nftTransactions'),
+        where('userId', '==', userId),
+        orderBy('timestamp', 'desc')
+      );
+      const querySnapshot = await getDocs(q);
+      return querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+    } catch (error) {
+      console.error('Error getting NFT transactions:', error);
+      return [];
+    }
+  },
+
+  // NFT transaction qo'shish
+  async addNFTTransaction(transactionData: any): Promise<string | null> {
+    try {
+      const docRef = await addDoc(collection(db, 'nftTransactions'), {
+        ...transactionData,
+        timestamp: Timestamp.now(),
+        createdAt: Timestamp.now(),
+        updatedAt: Timestamp.now()
+      });
+      return docRef.id;
+    } catch (error) {
+      console.error('Error adding NFT transaction:', error);
+      return null;
+    }
+  }
+};
+
+// User Service
+export const userService = {
+  // Barcha user'larni olish
+  async getAllUsers(): Promise<any[]> {
+    try {
+      // Firebase'dan real user'larni olish
+      try {
+        const usersCollection = collection(db, 'users');
+        const usersSnapshot = await getDocs(usersCollection);
+        const realUsers = usersSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        
+        if (realUsers.length > 0) {
+          return realUsers;
+        }
+      } catch (firebaseError) {
+        console.log('Firebase users not available, using demo users');
+      }
+      
+      // Fallback to demo users if Firebase fails
+      const demoUsers = [
+        {
+          id: 'user1',
+          username: 'john_doe',
+          email: 'john.doe@example.com',
+          displayName: 'John Doe',
+          avatar: '/api/placeholder/40/40',
+          isActive: true,
+          joinedAt: '2024-01-15T10:00:00Z',
+          role: 'student'
+        },
+        {
+          id: 'user2',
+          username: 'jane_smith',
+          email: 'jane.smith@example.com',
+          displayName: 'Jane Smith',
+          avatar: '/api/placeholder/40/40',
+          isActive: true,
+          joinedAt: '2024-02-20T14:30:00Z',
+          role: 'teacher'
+        },
+        {
+          id: 'user3',
+          username: 'crypto_master',
+          email: 'crypto@blockchain.com',
+          displayName: 'Crypto Master',
+          avatar: '/api/placeholder/40/40',
+          isActive: true,
+          joinedAt: '2024-03-10T09:15:00Z',
+          role: 'student'
+        },
+        {
+          id: 'user4',
+          username: 'blockchain_dev',
+          email: 'dev@lernis.com',
+          displayName: 'Blockchain Developer',
+          avatar: '/api/placeholder/40/40',
+          isActive: true,
+          joinedAt: '2024-01-25T16:45:00Z',
+          role: 'teacher'
+        },
+        {
+          id: 'user5',
+          username: 'nft_collector',
+          email: 'collector@nft.com',
+          displayName: 'NFT Collector',
+          avatar: '/api/placeholder/40/40',
+          isActive: true,
+          joinedAt: '2024-02-05T11:20:00Z',
+          role: 'student'
+        }
+      ];
+      
+      return demoUsers;
+    } catch (error) {
+      console.error('Error getting users:', error);
+      return [];
+    }
+  },
+
+  // User'ni ID bo'yicha qidirish
+  async getUserById(userId: string): Promise<any | null> {
+    try {
+      const users = await this.getAllUsers();
+      return users.find(user => user.id === userId) || null;
+    } catch (error) {
+      console.error('Error getting user by ID:', error);
+      return null;
+    }
+  },
+
+  // User'larni qidirish
+  async searchUsers(query: string, limit: number = 10): Promise<any[]> {
+    try {
+      const users = await this.getAllUsers();
+      const searchQuery = query.toLowerCase();
+      
+      const filteredUsers = users.filter(user => {
+        return (
+          user.id.toLowerCase().includes(searchQuery) ||
+          user.username.toLowerCase().includes(searchQuery) ||
+          user.email.toLowerCase().includes(searchQuery) ||
+          user.displayName.toLowerCase().includes(searchQuery)
+        );
+      });
+
+      return filteredUsers.slice(0, limit);
+    } catch (error) {
+      console.error('Error searching users:', error);
+      return [];
+    }
+  }
+};
+
 // Wallet Service
 export const walletService = {
   // Wallet statistikalarini olish (with caching)
@@ -373,10 +637,21 @@ export const walletService = {
   async updateWalletStats(userId: string, stats: Partial<WalletStats>): Promise<boolean> {
     try {
       const docRef = doc(db, 'walletStats', userId);
-      await updateDoc(docRef, {
-        ...stats,
-        updatedAt: Timestamp.now()
-      });
+      const docSnap = await getDoc(docRef);
+      
+      if (docSnap.exists()) {
+        await updateDoc(docRef, {
+          ...stats,
+          updatedAt: Timestamp.now()
+        });
+      } else {
+        // Document doesn't exist, create it
+        await setDoc(docRef, {
+          ...stats,
+          userId,
+          updatedAt: Timestamp.now()
+        });
+      }
       return true;
     } catch (error) {
       console.error('Error updating wallet stats:', error);
@@ -995,7 +1270,7 @@ export const seedDemoData = async (userId: string) => {
     };
 
     const docRef = doc(db, 'walletStats', userId);
-    await updateDoc(docRef, walletStats as any);
+    await setDoc(docRef, walletStats as any);
 
     // User analytics yaratish
     const userAnalytics: Omit<UserAnalytics, 'id' | 'createdAt' | 'updatedAt'> = {

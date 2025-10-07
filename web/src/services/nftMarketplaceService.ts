@@ -1,4 +1,7 @@
 // NFT Marketplace Service
+import { lernisTokenService } from './lernisTokenService';
+import { autoFirebaseService } from './autoFirebaseService';
+
 export interface NFTTransaction {
   id: string;
   nftId: string;
@@ -9,6 +12,11 @@ export interface NFTTransaction {
   timestamp: string;
   status: 'completed' | 'pending' | 'failed';
   transactionHash?: string;
+  type: 'purchase' | 'gift' | 'transfer';
+  recipientId?: string;
+  recipientName?: string;
+  recipientEmail?: string;
+  giftMessage?: string;
 }
 
 export interface NFT {
@@ -434,36 +442,67 @@ export const nftMarketplaceService = {
 
   // Get user's owned NFTs
   async getUserNFTs(userId: string): Promise<NFT[]> {
-    // Simulate user's owned NFTs
-    return [
-      {
-        id: '4',
-        name: 'My First Certificate',
-        description: 'My first completed course certificate',
-        image: '/api/placeholder/300/300',
-        price: 0,
-        currency: 'LERNIS',
-        creator: {
-          id: 'creator1',
-          name: 'Lernis Academy',
-          avatar: '/api/placeholder/40/40'
-        },
-        owner: {
-          id: userId,
-          name: 'You',
-          avatar: '/api/placeholder/40/40'
-        },
-        category: 'certificate',
-        rarity: 'common',
-        attributes: [
-          { trait_type: 'Course', value: 'Introduction to Blockchain' },
-          { trait_type: 'Grade', value: 'A+' }
-        ],
-        mintedAt: new Date(Date.now() - 259200000).toISOString(),
-        isListed: false,
-        isOwned: true
+    try {
+      // Firebase'dan owned NFT'larni olish
+      const { nftOwnershipService } = await import('./firebaseService');
+      const firebaseNFTs = await nftOwnershipService.getUserNFTs(userId);
+      
+      if (firebaseNFTs.length > 0) {
+        return firebaseNFTs.map(nft => ({
+          ...nft,
+          owner: {
+            id: nft.ownerId,
+            name: 'You',
+            avatar: '/api/placeholder/40/40'
+          },
+          isOwned: true
+        }));
       }
-    ];
+      
+      // Fallback to localStorage if Firebase fails
+      const ownedNFTs = JSON.parse(localStorage.getItem(`owned_nfts_${userId}`) || '[]');
+      
+      // Also check for NFTs purchased or received through transactions
+      const transactions = JSON.parse(localStorage.getItem(`nft_transactions_${userId}`) || '[]');
+      const allNFTs = await this.getNFTs();
+      const transactionNFTs = transactions
+        .filter((tx: NFTTransaction) => 
+          (tx.type === 'purchase' || tx.type === 'gift') && 
+          tx.status === 'completed' && 
+          tx.buyer === userId
+        )
+        .map((tx: NFTTransaction) => {
+          // Find the NFT details from the marketplace
+          const nft = allNFTs.find(n => n.id === tx.nftId);
+          if (nft) {
+            return {
+              ...nft,
+              owner: {
+                id: userId,
+                name: 'You',
+                avatar: '/api/placeholder/40/40'
+              },
+              isOwned: true,
+              receivedAt: tx.timestamp,
+              receivedFrom: tx.type === 'gift' ? tx.seller : undefined,
+              giftMessage: tx.giftMessage
+            };
+          }
+          return null;
+        })
+        .filter(Boolean);
+
+      // Combine owned NFTs and transaction NFTs, removing duplicates
+      const allOwnedNFTs = [...ownedNFTs, ...transactionNFTs];
+      const uniqueNFTs = allOwnedNFTs.filter((nft, index, self) => 
+        index === self.findIndex(n => n.id === nft.id)
+      );
+
+      return uniqueNFTs;
+    } catch (error) {
+      console.error('Error getting user NFTs:', error);
+      return [];
+    }
   },
 
   // Purchase NFT
@@ -478,7 +517,6 @@ export const nftMarketplaceService = {
       }
       
       // User'ning EDU token balansini tekshirish
-      const { lernisTokenService } = await import('./lernisTokenService');
       const userBalance = await lernisTokenService.getLernisTokenBalance(userId);
       
       if (parseFloat(userBalance.balance) < nft.price) {
@@ -511,7 +549,55 @@ export const nftMarketplaceService = {
       
       localStorage.setItem('marketplace_nfts', JSON.stringify(updatedNFTs));
       
-      // NFT transaction'ini saqlash
+      // Add to user's owned NFTs in Firebase (avtomatik sync)
+      const ownershipData = {
+        nftId: nft.id,
+        ownerId: userId,
+        nftName: nft.name,
+        nftDescription: nft.description,
+        nftImage: nft.image,
+        nftPrice: nft.price,
+        nftCategory: nft.category,
+        nftRarity: nft.rarity,
+        nftAttributes: nft.attributes,
+        nftCreator: nft.creator,
+        acquiredType: 'purchase',
+        acquiredAt: new Date().toISOString(),
+        action: 'add'
+      };
+      
+      await autoFirebaseService.syncOnChange(userId, 'nft', ownershipData);
+      
+      // Fallback to localStorage
+      const ownedNFTs = JSON.parse(localStorage.getItem(`owned_nfts_${userId}`) || '[]');
+      const purchasedNFT = {
+        ...nft,
+        owner: {
+          id: userId,
+          name: 'You',
+          avatar: '/api/placeholder/40/40'
+        },
+        isOwned: true,
+        purchasedAt: new Date().toISOString()
+      };
+      ownedNFTs.push(purchasedNFT);
+      localStorage.setItem(`owned_nfts_${userId}`, JSON.stringify(ownedNFTs));
+      
+      // NFT transaction'ini Firebase'ga saqlash (avtomatik sync)
+      const nftTransactionData = {
+        userId: userId,
+        nftId: nftId,
+        nftName: nft.name,
+        buyer: userId,
+        seller: typeof nft.owner === 'string' ? nft.owner : 'unknown',
+        price: nft.price,
+        status: 'completed',
+        type: 'purchase'
+      };
+      
+      await autoFirebaseService.syncOnChange(userId, 'transaction', nftTransactionData);
+      
+      // Fallback to localStorage
       const nftTransaction: NFTTransaction = {
         id: `nft_tx_${Date.now()}`,
         nftId: nftId,
@@ -520,7 +606,8 @@ export const nftMarketplaceService = {
         seller: typeof nft.owner === 'string' ? nft.owner : 'unknown',
         price: nft.price,
         timestamp: new Date().toISOString(),
-        status: 'completed'
+        status: 'completed',
+        type: 'purchase'
       };
       
       const existingTransactions = JSON.parse(localStorage.getItem(`nft_transactions_${userId}`) || '[]');
@@ -572,6 +659,247 @@ export const nftMarketplaceService = {
       return { success: true };
     } catch (error) {
       return { success: false, error: 'Listing failed' };
+    }
+  },
+
+  // Gift NFT to another user
+  async giftNFT(
+    senderId: string, 
+    nftId: string, 
+    recipientId: string, 
+    giftMessage?: string
+  ): Promise<{ success: boolean; error?: string; transactionId?: string }> {
+    try {
+      // Import user search service
+      const { userSearchService } = await import('./userSearchService');
+      
+      // Validate recipient
+      const recipientValidation = await userSearchService.validateUser(recipientId);
+      if (!recipientValidation.isValid) {
+        return { success: false, error: recipientValidation.error || 'Invalid recipient' };
+      }
+      
+      const recipient = recipientValidation.user!;
+      
+      // Get NFT details
+      const nfts = await this.getNFTs();
+      const nft = nfts.find(n => n.id === nftId);
+      
+      if (!nft) {
+        return { success: false, error: 'NFT not found' };
+      }
+      
+      // Check if sender has enough EDU tokens
+      const senderBalance = await lernisTokenService.getLernisTokenBalance(senderId);
+      
+      if (parseFloat(senderBalance.balance) < nft.price) {
+        return { success: false, error: 'Insufficient EDU tokens' };
+      }
+      
+      // Deduct tokens from sender
+      const newBalance = (parseFloat(senderBalance.balance) - nft.price).toFixed(2);
+      const newUsdValue = (parseFloat(newBalance) * 0.05).toFixed(2);
+      
+      await lernisTokenService.updateTokenBalance(senderId, newBalance, newUsdValue);
+      
+      // Add transaction record for sender
+      const senderTransaction = {
+        id: `nft_gift_${Date.now()}`,
+        type: 'gift' as const,
+        amount: `-${nft.price}`,
+        symbol: 'EDU',
+        timestamp: new Date().toISOString(),
+        status: 'confirmed' as const,
+        description: `Gifted NFT: ${nft.name} to ${recipient.displayName}`
+      };
+      
+      await lernisTokenService.addTransaction(senderId, senderTransaction);
+      
+      // Create NFT gift transaction
+      const nftGiftTransaction: NFTTransaction = {
+        id: `nft_gift_${Date.now()}`,
+        nftId: nftId,
+        nftName: nft.name,
+        buyer: senderId,
+        seller: typeof nft.owner === 'string' ? nft.owner : 'marketplace',
+        price: nft.price,
+        timestamp: new Date().toISOString(),
+        status: 'completed',
+        type: 'gift',
+        recipientId: recipient.id,
+        recipientName: recipient.displayName,
+        recipientEmail: recipient.email,
+        giftMessage: giftMessage
+      };
+      
+      // Save gift transaction for sender in Firebase (avtomatik sync)
+      const senderTransactionData = {
+        userId: senderId,
+        nftId: nftId,
+        nftName: nft.name,
+        buyer: senderId,
+        seller: typeof nft.owner === 'string' ? nft.owner : 'marketplace',
+        price: nft.price,
+        status: 'completed',
+        type: 'gift',
+        recipientId: recipient.id,
+        recipientName: recipient.displayName,
+        recipientEmail: recipient.email,
+        giftMessage: giftMessage
+      };
+      
+      await autoFirebaseService.syncOnChange(senderId, 'transaction', senderTransactionData);
+      
+      // Save gift transaction for recipient in Firebase (avtomatik sync)
+      const recipientTransactionData = {
+        userId: recipientId,
+        nftId: nftId,
+        nftName: nft.name,
+        buyer: recipientId,
+        seller: senderId,
+        price: nft.price,
+        status: 'completed',
+        type: 'gift',
+        receivedFrom: senderId,
+        giftMessage: giftMessage
+      };
+      
+      await autoFirebaseService.syncOnChange(recipientId, 'transaction', recipientTransactionData);
+      
+      // Fallback to localStorage
+      const senderTransactions = JSON.parse(localStorage.getItem(`nft_transactions_${senderId}`) || '[]');
+      senderTransactions.unshift(nftGiftTransaction);
+      localStorage.setItem(`nft_transactions_${senderId}`, JSON.stringify(senderTransactions));
+      
+      const recipientTransactions = JSON.parse(localStorage.getItem(`nft_transactions_${recipientId}`) || '[]');
+      const recipientGiftTransaction = {
+        ...nftGiftTransaction,
+        id: `nft_received_${Date.now()}`,
+        buyer: recipientId,
+        seller: senderId
+      };
+      recipientTransactions.unshift(recipientGiftTransaction);
+      localStorage.setItem(`nft_transactions_${recipientId}`, JSON.stringify(recipientTransactions));
+      
+      // Update NFT ownership
+      const updatedNFTs = nfts.map(n => 
+        n.id === nftId ? { 
+          ...n, 
+          owner: {
+            id: recipientId,
+            name: recipient.displayName,
+            avatar: recipient.avatar || '/api/placeholder/40/40'
+          },
+          isOwned: true 
+        } : n
+      );
+      
+      localStorage.setItem('marketplace_nfts', JSON.stringify(updatedNFTs));
+      
+      // Remove from sender's owned NFTs in Firebase (avtomatik sync)
+      await autoFirebaseService.syncOnChange(senderId, 'nft', {
+        action: 'remove',
+        nftId: nftId
+      });
+      
+      // Add to recipient's owned NFTs in Firebase (avtomatik sync)
+      const recipientOwnershipData = {
+        nftId: nft.id,
+        ownerId: recipientId,
+        nftName: nft.name,
+        nftDescription: nft.description,
+        nftImage: nft.image,
+        nftPrice: nft.price,
+        nftCategory: nft.category,
+        nftRarity: nft.rarity,
+        nftAttributes: nft.attributes,
+        nftCreator: nft.creator,
+        acquiredType: 'gift',
+        acquiredAt: new Date().toISOString(),
+        receivedFrom: senderId,
+        giftMessage: giftMessage,
+        action: 'add'
+      };
+      
+      await autoFirebaseService.syncOnChange(recipientId, 'nft', recipientOwnershipData);
+      
+      // Fallback to localStorage
+      const senderOwnedNFTs = JSON.parse(localStorage.getItem(`owned_nfts_${senderId}`) || '[]');
+      const updatedSenderNFTs = senderOwnedNFTs.filter((ownedNFT: any) => ownedNFT.id !== nftId);
+      localStorage.setItem(`owned_nfts_${senderId}`, JSON.stringify(updatedSenderNFTs));
+      
+      const recipientOwnedNFTs = JSON.parse(localStorage.getItem(`owned_nfts_${recipientId}`) || '[]');
+      recipientOwnedNFTs.push({
+        ...nft,
+        owner: {
+          id: recipientId,
+          name: recipient.displayName,
+          avatar: recipient.avatar || '/api/placeholder/40/40'
+        },
+        isOwned: true,
+        receivedAt: new Date().toISOString(),
+        receivedFrom: senderId,
+        giftMessage: giftMessage
+      });
+      localStorage.setItem(`owned_nfts_${recipientId}`, JSON.stringify(recipientOwnedNFTs));
+      
+      return { 
+        success: true, 
+        transactionId: nftGiftTransaction.id 
+      };
+    } catch (error) {
+      console.error('Error gifting NFT:', error);
+      return { success: false, error: 'Gift failed' };
+    }
+  },
+
+  // Get user's received gifts
+  async getUserReceivedGifts(userId: string): Promise<NFTTransaction[]> {
+    try {
+      // Firebase'dan received gifts'ni olish
+      const { nftTransactionService } = await import('./firebaseService');
+      const firebaseTransactions = await nftTransactionService.getNFTTransactions(userId);
+      const receivedGifts = firebaseTransactions.filter(tx => 
+        tx.type === 'gift' && tx.buyer === userId && tx.seller !== userId
+      );
+      
+      if (receivedGifts.length > 0) {
+        return receivedGifts;
+      }
+      
+      // Fallback to localStorage
+      const transactions = JSON.parse(localStorage.getItem(`nft_transactions_${userId}`) || '[]');
+      return transactions.filter((tx: NFTTransaction) => 
+        tx.type === 'gift' && tx.buyer === userId
+      );
+    } catch (error) {
+      console.error('Error getting received gifts:', error);
+      return [];
+    }
+  },
+
+  // Get user's sent gifts
+  async getUserSentGifts(userId: string): Promise<NFTTransaction[]> {
+    try {
+      // Firebase'dan sent gifts'ni olish
+      const { nftTransactionService } = await import('./firebaseService');
+      const firebaseTransactions = await nftTransactionService.getNFTTransactions(userId);
+      const sentGifts = firebaseTransactions.filter(tx => 
+        tx.type === 'gift' && tx.buyer === userId
+      );
+      
+      if (sentGifts.length > 0) {
+        return sentGifts;
+      }
+      
+      // Fallback to localStorage
+      const transactions = JSON.parse(localStorage.getItem(`nft_transactions_${userId}`) || '[]');
+      return transactions.filter((tx: NFTTransaction) => 
+        tx.type === 'gift' && tx.seller === userId
+      );
+    } catch (error) {
+      console.error('Error getting sent gifts:', error);
+      return [];
     }
   },
 
